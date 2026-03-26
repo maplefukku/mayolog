@@ -86,14 +86,14 @@ function ResultContent() {
                   <p className="text-lg font-semibold">「{priority}」</p>
                 </div>
 
-                <div className="h-px bg-border" />
+                <div className="h-px bg-border/50" />
 
                 <div className="space-y-1.5">
                   <p className="text-sm text-muted-foreground">判断の傾向</p>
                   <p className="text-lg font-semibold">「{tendency}」</p>
                 </div>
 
-                <div className="h-px bg-border" />
+                <div className="h-px bg-border/50" />
 
                 <div className="space-y-1.5">
                   <p className="text-sm text-muted-foreground">今日の気づき</p>

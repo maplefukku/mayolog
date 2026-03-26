@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, History, BarChart3 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { AppShell, StickyHeader } from "@/components/app-shell";
 import { FadeInUp, fadeInUp } from "@/components/motion";
@@ -43,14 +43,7 @@ export default function InputPage() {
             戻る
           </Button>
         </Link>
-        <div className="flex gap-1">
-          <Button variant="ghost" size="icon" aria-label="履歴">
-            <History className="size-4" />
-          </Button>
-          <Button variant="ghost" size="icon" aria-label="判断軸">
-            <BarChart3 className="size-4" />
-          </Button>
-        </div>
+        <span />
       </StickyHeader>
 
       <main className="flex flex-1 flex-col py-8">
