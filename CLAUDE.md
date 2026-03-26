@@ -15,7 +15,7 @@ npx vitest --coverage # カバレッジ確認
 
 ## アーキテクチャ
 - Next.js App Router (src/app/)
-- Supabase (認証 + DB)
+- Supabase (認証 + DB) ※今回は未実装
 - GLM API (LLM) — OpenAI互換、baseURL変更のみ
 
 ## デザインルール
@@ -30,8 +30,3 @@ npx vitest --coverage # カバレッジ確認
 - グラデーション背景
 - shadcn/uiデフォルトそのまま
 - テストなしのコード
-
-## LLM設定
-GLM_API_KEY=d4d5b41fda2845b48f8f55c4e3a1e3e9.TMSBR1aLRdCgSkEo
-GLM_BASE_URL=https://api.z.ai/api/coding/paas/v4/
-GLM_MODEL=glm-4.7
