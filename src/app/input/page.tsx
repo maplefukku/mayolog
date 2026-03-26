@@ -30,7 +30,9 @@ export default function InputPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const canSubmit = text.trim().length > 0;
+  const maxLength = 200;
+  const trimmed = text.trim();
+  const canSubmit = trimmed.length > 0 && trimmed.length <= maxLength;
 
   return (
     <div className="flex min-h-full flex-col">
@@ -64,9 +66,15 @@ export default function InputPage() {
             <Textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
+              maxLength={maxLength}
               placeholder={placeholders[placeholderIndex]}
               className="mt-6 min-h-[120px] rounded-2xl border-border/50 bg-muted/50 text-base transition-colors focus-visible:bg-background"
             />
+            {text.length > 0 && (
+              <p className={`mt-1.5 text-right text-xs ${text.trim().length > maxLength ? 'text-destructive' : 'text-muted-foreground'}`}>
+                {text.trim().length}/{maxLength}
+              </p>
+            )}
           </FadeInUp>
 
           <FadeInUp
@@ -103,7 +111,7 @@ export default function InputPage() {
                 onClick={() => {
                   if (canSubmit) {
                     router.push(
-                      `/question?q=${encodeURIComponent(text.trim())}`
+                      `/question?q=${encodeURIComponent(trimmed)}`
                     );
                   }
                 }}
