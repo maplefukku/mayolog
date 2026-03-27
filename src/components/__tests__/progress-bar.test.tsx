@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { ProgressBar } from "../progress-bar";
 
 // Mock framer-motion
@@ -65,14 +65,16 @@ describe("ProgressBar", () => {
     ).toBeInTheDocument();
   });
 
-  it("reads from localStorage when count prop is not provided", () => {
+  it("reads from localStorage when count prop is not provided", async () => {
     mockGetDilemmaLogs.mockReturnValue([
       { id: "1", content: "a", answer: "b", createdAt: "" },
       { id: "2", content: "c", answer: "d", createdAt: "" },
       { id: "3", content: "e", answer: "f", createdAt: "" },
     ]);
     render(<ProgressBar />);
-    expect(screen.getByText("あと2回であなたの軸が見えます")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("あと2回であなたの軸が見えます")).toBeInTheDocument();
+    });
   });
 
   it("does not show progress bar numbers in completion state", () => {

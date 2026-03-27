@@ -266,11 +266,11 @@ describe("HistoryPage", () => {
       await user.click(card!);
       expect(screen.getByText("迷いの詳細")).toBeInTheDocument();
 
-      // モーダル内の閉じるボタン（size-8のボタン）
+      // モーダル内の閉じるボタン（size-7のボタン）
       const modal = screen.getByText("迷いの詳細").closest("div[class*='max-w-md']");
       expect(modal).toBeTruthy();
       const closeBtn = within(modal!).getAllByRole("button").find(
-        btn => btn.className.includes("size-8")
+        btn => btn.className.includes("size-7")
       );
       expect(closeBtn).toBeTruthy();
       await user.click(closeBtn!);
