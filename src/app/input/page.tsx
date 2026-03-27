@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { AppShell, StickyHeader } from "@/components/app-shell";
 import { FadeInUp, fadeInUp } from "@/components/motion";
+import { OnboardingModal } from "@/components/onboarding-modal";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -31,12 +32,20 @@ export default function InputPage() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleOnboardingComplete = (sampleText?: string) => {
+    if (sampleText) {
+      setText(sampleText);
+      router.push(`/question?q=${encodeURIComponent(sampleText)}`);
+    }
+  };
+
   const maxLength = 200;
   const trimmed = text.trim();
   const canSubmit = trimmed.length > 0 && trimmed.length <= maxLength;
 
   return (
     <div className="flex min-h-full flex-col">
+      <OnboardingModal onComplete={handleOnboardingComplete} />
       <StickyHeader>
         <Link href="/">
           <Button variant="ghost" size="sm" className="gap-1.5">
@@ -44,7 +53,13 @@ export default function InputPage() {
             戻る
           </Button>
         </Link>
-        <span />
+        <Link
+          href="/history"
+          aria-label="迷い履歴"
+          className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <Clock className="size-4" />
+        </Link>
       </StickyHeader>
 
       <main className="flex flex-1 flex-col py-8">
