@@ -19,7 +19,10 @@ export function ProgressBar({ count: countProp }: ProgressBarProps) {
 
   useEffect(() => {
     if (countProp !== undefined) return;
-    setCount(getDilemmaLogs().length);
+    const timer = setTimeout(() => {
+      setCount(getDilemmaLogs().length);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [countProp]);
 
   // SSR or loading
