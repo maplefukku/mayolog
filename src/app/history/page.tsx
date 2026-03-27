@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Clock, Lightbulb, PenLine, Trash2, X } from "lucide-react";
+import { ArrowLeft, Clock, Lightbulb, PenLine, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppShell, StickyHeader } from "@/components/app-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -14,6 +14,13 @@ import {
   staggerItem,
 } from "@/components/motion";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { getDilemmaLogs, deleteDilemmaLog, type DilemmaLog, type Category } from "@/lib/dilemma-store";
 
 const ANALYSIS_THRESHOLD = 5;
@@ -214,72 +221,64 @@ function EmptyState() {
 
 function DetailModal({
   log,
-  onClose,
+  open,
+  onOpenChange,
   onDelete,
 }: {
-  log: DilemmaLog;
-  onClose: () => void;
+  log: DilemmaLog | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onDelete: (id: string) => void;
 }) {
   const [showConfirm, setShowConfirm] = useState(false);
 
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        transition={{ duration: 0.2 }}
-        className="relative z-10 w-full max-w-md rounded-2xl border border-border/50 bg-card p-6 shadow-lg"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between">
-          <h2 className="text-lg font-semibold">迷いの詳細</h2>
-          <button
-            onClick={onClose}
-            className="flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
+  if (!log) return null;
 
-        <div className="mt-5 space-y-4">
+  return (
+    <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); setShowConfirm(false); }}>
+      <DialogContent showCloseButton>
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold">迷いの詳細</DialogTitle>
+          <DialogDescription className="sr-only">
+            迷いの詳細を表示しています
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
           <div>
             <p className="text-xs font-medium text-muted-foreground">迷いの内容</p>
             <p className="mt-1 text-base font-medium">「{log.content}」</p>
           </div>
 
-          {log.category && (
+          <div className="h-px bg-border/50" />
+
+          <div className="flex items-center gap-6">
             <div>
-              <p className="text-xs font-medium text-muted-foreground">カテゴリ</p>
-              <div className="mt-1">
-                <CategoryTag category={log.category} />
-              </div>
+              <p className="text-xs font-medium text-muted-foreground">日時</p>
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-foreground">
+                <Clock className="size-3" />
+                {formatDate(log.createdAt)}
+              </p>
             </div>
-          )}
+            {log.category && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">カテゴリ</p>
+                <div className="mt-1">
+                  <CategoryTag category={log.category} />
+                </div>
+              </div>
+            )}
+          </div>
 
           {log.answer && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">判断軸</p>
-              <p className="mt-1 text-sm text-foreground">{log.answer}</p>
-            </div>
+            <>
+              <div className="h-px bg-border/50" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">回答</p>
+                <p className="mt-1 text-sm text-foreground">{log.answer}</p>
+              </div>
+            </>
           )}
-
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">日時</p>
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-foreground">
-              <Clock className="size-3" />
-              {formatDate(log.createdAt)}
-            </p>
-          </div>
         </div>
 
         <AnimatePresence mode="wait">
@@ -290,7 +289,7 @@ function DetailModal({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.15 }}
-              className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30"
+              className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30"
             >
               <p className="text-sm font-medium text-red-700 dark:text-red-300">
                 この記録を削除しますか？
@@ -323,7 +322,7 @@ function DetailModal({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="mt-6 flex justify-end"
+              className="flex justify-end"
             >
               <motion.button
                 whileTap={{ scale: 0.95 }}
@@ -336,8 +335,8 @@ function DetailModal({
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.div>
-    </motion.div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -501,15 +500,12 @@ export default function HistoryPage() {
         </AppShell>
       </main>
 
-      <AnimatePresence>
-        {selectedLog && (
-          <DetailModal
-            log={selectedLog}
-            onClose={() => setSelectedLog(null)}
-            onDelete={handleDelete}
-          />
-        )}
-      </AnimatePresence>
+      <DetailModal
+        log={selectedLog}
+        open={selectedLog !== null}
+        onOpenChange={(open) => { if (!open) setSelectedLog(null); }}
+        onDelete={handleDelete}
+      />
     </div>
   );
 }
