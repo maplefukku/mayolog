@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Loader2, ChevronDown } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { AppShell, StickyHeader } from "@/components/app-shell";
 import { FadeInUp, fadeInUp } from "@/components/motion";
 import { Button } from "@/components/ui/button";
@@ -44,8 +44,8 @@ function QuestionContent() {
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  void error; // Used for debugging
+  const [error_, setError] = useState<string | null>(null);
+  void error_;
   const [currentQ, setCurrentQ] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [answers, setAnswers] = useState<number[]>([]);
@@ -109,7 +109,6 @@ function QuestionContent() {
 
   const question = questions[currentQ];
   const isLast = currentQ === questions.length - 1;
-  const totalAnswered = answers.length;
   const canDeepDive = questions.length < MAX_QUESTIONS;
 
   function buildHistory(newAnswers: number[]) {

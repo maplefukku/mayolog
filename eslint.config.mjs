@@ -14,6 +14,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Test files can use any
     "src/lib/db/__tests__/**",
+    "src/**/__tests__/**",
     // Coverage files
     "coverage/**",
   ]),

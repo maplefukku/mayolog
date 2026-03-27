@@ -11,11 +11,11 @@ vi.mock('next/link', () => ({
 vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => {
-      const { whileHover, whileTap, initial, animate, variants, transition, ...rest } = props as Record<string, unknown>
+      const { whileHover: _whileHover, whileTap: _whileTap, initial: _initial, animate: _animate, variants: _variants, transition: _transition, ...rest } = props as Record<string, unknown>
       return <div {...rest as React.HTMLAttributes<HTMLDivElement>}>{children}</div>
     },
     button: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => {
-      const { whileHover, whileTap, initial, animate, variants, transition, ...rest } = props as Record<string, unknown>
+      const { whileHover: _whileHover, whileTap: _whileTap, initial: _initial, animate: _animate, variants: _variants, transition: _transition, ...rest } = props as Record<string, unknown>
       return <button {...rest as React.ButtonHTMLAttributes<HTMLButtonElement>}>{children}</button>
     },
   },
