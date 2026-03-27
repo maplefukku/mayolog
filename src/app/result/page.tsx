@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, Clock, Loader2, Share2 } from "lucide-react";
+import { ArrowLeft, Check, Clock, ExternalLink, Loader2, Share2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { AppShell, StickyHeader } from "@/components/app-shell";
 import { FadeInUp, fadeInUp } from "@/components/motion";
@@ -269,7 +269,52 @@ function ResultContent() {
             {...fadeInUp}
             transition={{ ...fadeInUp.transition, delay: 0.4 }}
           >
-            <div className="mt-8">
+            <div className="mt-8 space-y-3">
+              {/* OGP Preview */}
+              {hasAxes && (
+                <div className="overflow-hidden rounded-2xl border border-border/50 shadow-sm">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/api/og?d=${encodeURIComponent(input)}&a=${encodeURIComponent(axes[0]?.label || "")}`}
+                    alt="シェア画像プレビュー"
+                    className="w-full"
+                    width={1200}
+                    height={630}
+                  />
+                </div>
+              )}
+
+              {/* SNS Share Buttons */}
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="outline"
+                  className="h-12 rounded-full text-sm font-semibold"
+                  onClick={() => {
+                    const text = `私の判断パターン: 「${axes[0]?.label || "分析中"}」\n#MayoLog`;
+                    const url = typeof window !== "undefined" ? window.location.origin : "";
+                    const ogUrl = `${url}/api/og?d=${encodeURIComponent(input)}&a=${encodeURIComponent(axes[0]?.label || "")}`;
+                    const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(ogUrl)}`;
+                    window.open(tweetUrl, "_blank", "noopener,noreferrer");
+                  }}
+                >
+                  <ExternalLink className="size-4" aria-hidden="true" />
+                  X でシェア
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-12 rounded-full text-sm font-semibold"
+                  onClick={() => {
+                    const url = typeof window !== "undefined" ? window.location.origin : "";
+                    const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+                    window.open(linkedInUrl, "_blank", "noopener,noreferrer");
+                  }}
+                >
+                  <ExternalLink className="size-4" aria-hidden="true" />
+                  LinkedIn でシェア
+                </Button>
+              </div>
+
+              {/* Generic Share / Copy */}
               <Button
                 variant="outline"
                 aria-label="判断パターンをシェアする"
@@ -281,7 +326,7 @@ function ResultContent() {
                 ) : (
                   <Share2 className="size-4" aria-hidden="true" />
                 )}
-                {copied ? "コピーしました！" : "シェアする"}
+                {copied ? "コピーしました！" : "リンクをコピー"}
               </Button>
             </div>
           </FadeInUp>

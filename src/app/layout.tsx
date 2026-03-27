@@ -19,6 +19,16 @@ export const metadata: Metadata = {
   title: "MayoLog - 迷ったら5秒で記録",
   description:
     "迷った瞬間を5秒で記録。AIが判断パターンを分析し、自分の軸が見える。",
+  openGraph: {
+    title: "MayoLog - 迷ったら5秒で記録",
+    description: "迷いを記録するだけで、自分の判断軸が見える",
+    images: ["/api/og"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MayoLog",
+    description: "迷ったら5秒で記録、勝手に自分の軸が見える",
+  },
 };
 
 export default function RootLayout({

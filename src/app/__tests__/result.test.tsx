@@ -97,7 +97,36 @@ describe('ResultPage', () => {
 
     render(<ResultPage />)
     await waitFor(() => {
-      expect(screen.getByText('シェアする')).toBeInTheDocument()
+      expect(screen.getByText('リンクをコピー')).toBeInTheDocument()
+    })
+  })
+
+  it('SNSシェアボタンが表示される', async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockAxes),
+      })
+    ) as unknown as typeof fetch
+
+    render(<ResultPage />)
+    await waitFor(() => {
+      expect(screen.getByText('X でシェア')).toBeInTheDocument()
+      expect(screen.getByText('LinkedIn でシェア')).toBeInTheDocument()
+    })
+  })
+
+  it('OGP画像プレビューが表示される', async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockAxes),
+      })
+    ) as unknown as typeof fetch
+
+    render(<ResultPage />)
+    await waitFor(() => {
+      expect(screen.getByAltText('シェア画像プレビュー')).toBeInTheDocument()
     })
   })
 })
