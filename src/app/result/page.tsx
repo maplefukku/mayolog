@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, BookmarkPlus, Loader2, Share2 } from "lucide-react";
+import { ArrowLeft, BookmarkPlus, Check, Clock, Loader2, Share2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { AppShell, StickyHeader } from "@/components/app-shell";
 import { FadeInUp, fadeInUp } from "@/components/motion";
 import { Button } from "@/components/ui/button";
+import { addDilemmaLog } from "@/lib/dilemma-store";
 
 interface AxisEntry {
   label: string;
@@ -45,6 +46,42 @@ function ResultContent() {
   const [axes, setAxes] = useState<AxisEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = useCallback(async () => {
+    const shareText = `私の判断パターン: 「${axes[0]?.label || "分析中"}」\n#MayoLog`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "MayoLog - 判断パターン",
+          text: shareText,
+          url: window.location.origin,
+        });
+      } catch {
+        // ユーザーがキャンセルした場合は何もしない
+      }
+    } else {
+      await navigator.clipboard.writeText(shareText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [axes]);
+
+  // 迷いログをlocalStorageに保存
+  useEffect(() => {
+    if (saved) return;
+    let answer = "";
+    if (answersParam) {
+      try {
+        const followups = JSON.parse(decodeURIComponent(answersParam)) as { question: string; answer: string }[];
+        answer = followups[0]?.answer || "";
+      } catch { /* ignore */ }
+    }
+    addDilemmaLog(input, answer);
+    setSaved(true);
+  }, [input, answersParam, saved]);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,10 +147,13 @@ function ResultContent() {
             もう一度
           </Button>
         </Link>
-        <Button variant="ghost" size="sm" className="gap-1.5">
-          <BookmarkPlus className="size-4" />
-          履歴に追加
-        </Button>
+        <Link
+          href="/history"
+          aria-label="迷い履歴"
+          className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <Clock className="size-4" />
+        </Link>
       </StickyHeader>
 
       <main className="flex flex-1 flex-col py-8">
@@ -215,9 +255,14 @@ function ResultContent() {
                 variant="outline"
                 aria-label="判断パターンをシェアする"
                 className="h-12 w-full rounded-full text-base font-semibold"
+                onClick={handleShare}
               >
-                <Share2 className="size-4" aria-hidden="true" />
-                シェアする
+                {copied ? (
+                  <Check className="size-4" aria-hidden="true" />
+                ) : (
+                  <Share2 className="size-4" aria-hidden="true" />
+                )}
+                {copied ? "コピーしました！" : "シェアする"}
               </Button>
             </div>
           </FadeInUp>

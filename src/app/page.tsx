@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Zap, MessageCircle, Compass } from "lucide-react";
+import { Zap, MessageCircle, Compass, Clock } from "lucide-react";
 import { AppShell, StickyHeader } from "@/components/app-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -38,7 +38,16 @@ export default function Home() {
         <span className="text-base font-semibold tracking-tight">
           MayoLog
         </span>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <Link
+            href="/history"
+            aria-label="迷い履歴"
+            className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <Clock className="size-4" />
+          </Link>
+          <ThemeToggle />
+        </div>
       </StickyHeader>
 
       <main className="flex flex-1 flex-col">
