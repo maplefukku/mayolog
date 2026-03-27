@@ -1,30 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { OnboardingModal } from '../onboarding-modal'
-
-const localStorageMock = (() => {
-  let store: Record<string, string> = {}
-  return {
-    getItem: vi.fn((key: string) => store[key] ?? null),
-    setItem: vi.fn((key: string, value: string) => { store[key] = value }),
-    clear: vi.fn(() => { store = {} }),
-    removeItem: vi.fn((key: string) => { delete store[key] }),
-    get length() { return Object.keys(store).length },
-    key: vi.fn((index: number) => Object.keys(store)[index] ?? null),
-  }
-})()
-
-Object.defineProperty(window, 'localStorage', { value: localStorageMock })
 
 describe('OnboardingModal', () => {
   beforeEach(() => {
-    localStorageMock.clear()
+    localStorage.clear()
     vi.clearAllMocks()
   })
 
-  it('初回アクセス時にモーダルが表示される', () => {
+  it('初回アクセス時にモーダルが表示される', async () => {
     const onComplete = vi.fn()
-    render(<OnboardingModal onComplete={onComplete} />)
+    await act(async () => {
+      render(<OnboardingModal onComplete={onComplete} />)
+    })
     expect(screen.getByText('迷ったら5秒で記録しよう')).toBeInTheDocument()
     expect(screen.getByText('何に迷ってるか書くだけで、AIが判断パターンを分析します。')).toBeInTheDocument()
   })
@@ -36,19 +24,23 @@ describe('OnboardingModal', () => {
     expect(screen.queryByText('迷ったら5秒で記録しよう')).not.toBeInTheDocument()
   })
 
-  it('スキップボタンでLocalStorageに保存される', () => {
+  it('スキップボタンでLocalStorageに保存される', async () => {
     const onComplete = vi.fn()
-    render(<OnboardingModal onComplete={onComplete} />)
+    await act(async () => {
+      render(<OnboardingModal onComplete={onComplete} />)
+    })
     fireEvent.click(screen.getByText('スキップ'))
-    expect(localStorage.getItem('mayolog_onboarded')).toBe('true')
+    expect(localStorage.setItem).toHaveBeenCalledWith('mayolog_onboarded', 'true')
     expect(onComplete).toHaveBeenCalledWith()
   })
 
-  it('体験ボタンでサンプルテキストが渡される', () => {
+  it('体験ボタンでサンプルテキストが渡される', async () => {
     const onComplete = vi.fn()
-    render(<OnboardingModal onComplete={onComplete} />)
+    await act(async () => {
+      render(<OnboardingModal onComplete={onComplete} />)
+    })
     fireEvent.click(screen.getByText('体験してみる'))
-    expect(localStorage.getItem('mayolog_onboarded')).toBe('true')
+    expect(localStorage.setItem).toHaveBeenCalledWith('mayolog_onboarded', 'true')
     expect(onComplete).toHaveBeenCalledTimes(1)
     const sampleText = onComplete.mock.calls[0][0]
     expect([
@@ -58,21 +50,26 @@ describe('OnboardingModal', () => {
     ]).toContain(sampleText)
   })
 
-  it('サンプル迷いが3つ表示される', () => {
+  it('サンプル迷いが3つ表示される', async () => {
     const onComplete = vi.fn()
-    render(<OnboardingModal onComplete={onComplete} />)
+    await act(async () => {
+      render(<OnboardingModal onComplete={onComplete} />)
+    })
     expect(screen.getByText('バイト断るか迷ってる')).toBeInTheDocument()
     expect(screen.getByText('インターン行くか迷ってる')).toBeInTheDocument()
     expect(screen.getByText('サークル続けるか迷ってる')).toBeInTheDocument()
   })
 
-  it('Xボタンでスキップと同じ動作をする', () => {
+  it('Xボタンでスキップと同じ動作をする', async () => {
     const onComplete = vi.fn()
-    render(<OnboardingModal onComplete={onComplete} />)
-    // X button is the first button (close button)
-    const closeButton = screen.getByText('スキップ').closest('div')!.parentElement!.querySelector('button')!
+    const { container } = await act(async () => {
+      return render(<OnboardingModal onComplete={onComplete} />)
+    })
+    // X button is the close button in the top-right corner (find by X icon)
+    const closeButton = container.querySelector('button[aria-label="閉じる"]') as HTMLElement
+    expect(closeButton).toBeTruthy()
     fireEvent.click(closeButton)
-    expect(localStorage.getItem('mayolog_onboarded')).toBe('true')
+    expect(localStorage.setItem).toHaveBeenCalledWith('mayolog_onboarded', 'true')
     expect(onComplete).toHaveBeenCalledWith()
   })
 })

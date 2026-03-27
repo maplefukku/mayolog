@@ -56,6 +56,7 @@ export function OnboardingModal({ onComplete }: { onComplete: (sampleText?: stri
           <button
             onClick={handleSkip}
             className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+            aria-label="閉じる"
           >
             <X className="size-5" />
           </button>
