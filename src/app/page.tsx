@@ -12,6 +12,7 @@ import {
   staggerContainer,
   staggerItem,
 } from "@/components/motion";
+import { ProgressBar } from "@/components/progress-bar";
 
 const features = [
   {
@@ -65,6 +66,11 @@ export default function Home() {
       </StickyHeader>
 
       <main className="flex flex-1 flex-col">
+        {/* 進捗バー */}
+        <AppShell className="pt-4">
+          <ProgressBar />
+        </AppShell>
+
         {/* ヒーロー */}
         <section className="flex flex-1 items-center py-20">
           <AppShell>
