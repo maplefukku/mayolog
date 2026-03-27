@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { ArrowLeft, Clock, PenLine } from "lucide-react";
+import { ArrowLeft, Clock, Lightbulb, PenLine } from "lucide-react";
 import { motion } from "framer-motion";
 import { AppShell, StickyHeader } from "@/components/app-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -14,9 +14,45 @@ import {
   staggerItem,
 } from "@/components/motion";
 import { Button } from "@/components/ui/button";
-import { getDilemmaLogs, type DilemmaLog } from "@/lib/dilemma-store";
+import { getDilemmaLogs, type DilemmaLog, type Category } from "@/lib/dilemma-store";
 
 const ANALYSIS_THRESHOLD = 5;
+
+const categoryConfig: Record<Category, { label: string; light: string; dark: string }> = {
+  career: {
+    label: "キャリア",
+    light: "bg-blue-100 text-blue-700",
+    dark: "dark:bg-blue-900/50 dark:text-blue-300",
+  },
+  relationship: {
+    label: "人間関係",
+    light: "bg-purple-100 text-purple-700",
+    dark: "dark:bg-purple-900/50 dark:text-purple-300",
+  },
+  time: {
+    label: "時間管理",
+    light: "bg-orange-100 text-orange-700",
+    dark: "dark:bg-orange-900/50 dark:text-orange-300",
+  },
+  self: {
+    label: "自己実現",
+    light: "bg-green-100 text-green-700",
+    dark: "dark:bg-green-900/50 dark:text-green-300",
+  },
+  daily: {
+    label: "日常",
+    light: "bg-gray-100 text-gray-700",
+    dark: "dark:bg-gray-800 dark:text-gray-300",
+  },
+};
+
+const patternInsights: Record<Category, string> = {
+  career: "就活や仕事選びで大切にしていることがありそう。",
+  relationship: "人とのつながりを大事にしているみたい。",
+  time: "時間の使い方にこだわりがあるのかも。",
+  self: "自分を成長させたいという気持ちが強そう。",
+  daily: "日々の小さな選択にも丁寧に向き合ってるね。",
+};
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -26,6 +62,101 @@ function formatDate(iso: string): string {
   const hour = String(d.getHours()).padStart(2, "0");
   const min = String(d.getMinutes()).padStart(2, "0");
   return `${year}/${month}/${day} ${hour}:${min}`;
+}
+
+function CategoryTag({ category }: { category: Category }) {
+  const config = categoryConfig[category];
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${config.light} ${config.dark}`}
+    >
+      {config.label}
+    </span>
+  );
+}
+
+function CategoryFilter({
+  selected,
+  onSelect,
+  counts,
+}: {
+  selected: Category | null;
+  onSelect: (c: Category | null) => void;
+  counts: Record<Category, number>;
+}) {
+  const allCategories: (Category | null)[] = [null, "career", "relationship", "time", "self", "daily"];
+  const totalCount = Object.values(counts).reduce((a, b) => a + b, 0);
+
+  return (
+    <FadeInUp {...fadeInUp} transition={{ ...fadeInUp.transition, delay: 0.05 }}>
+      <div className="flex flex-wrap gap-2">
+        {allCategories.map((cat) => {
+          const isActive = selected === cat;
+          const count = cat === null ? totalCount : counts[cat];
+          if (cat !== null && count === 0) return null;
+          const label = cat === null ? "すべて" : categoryConfig[cat].label;
+
+          return (
+            <motion.button
+              key={cat ?? "all"}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onSelect(cat)}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                isActive
+                  ? "bg-foreground text-background"
+                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+              }`}
+            >
+              {label}
+              <span className={`text-xs ${isActive ? "text-background/70" : "text-muted-foreground"}`}>
+                {count}
+              </span>
+            </motion.button>
+          );
+        })}
+      </div>
+    </FadeInUp>
+  );
+}
+
+function PatternInsight({ logs }: { logs: DilemmaLog[] }) {
+  const categorized = logs.filter((l) => l.category);
+  if (categorized.length < 3) return null;
+
+  const counts: Record<string, number> = {};
+  for (const log of categorized) {
+    const cat = log.category!;
+    counts[cat] = (counts[cat] || 0) + 1;
+  }
+
+  const topCategory = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  if (!topCategory) return null;
+
+  const [cat, count] = topCategory as [Category, number];
+  const config = categoryConfig[cat];
+  const insight = patternInsights[cat];
+
+  return (
+    <FadeInUp {...fadeInUp} transition={{ ...fadeInUp.transition, delay: 0.15 }}>
+      <div className="rounded-2xl border border-border/50 bg-card p-5 shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50">
+            <Lightbulb className="size-4 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold">あなたの迷いの傾向</p>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              「<span className="font-medium text-foreground">{config.label}</span>」に関する迷いが
+              {count}件で最も多いようです。
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {insight}
+            </p>
+          </div>
+        </div>
+      </div>
+    </FadeInUp>
+  );
 }
 
 function ProgressSection({ count }: { count: number }) {
@@ -87,10 +218,13 @@ function DilemmaCard({ log }: { log: DilemmaLog }) {
       {...staggerItem}
       className="rounded-2xl border border-border/50 bg-card p-5 shadow-sm"
     >
-      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Clock className="size-3" />
-        {formatDate(log.createdAt)}
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Clock className="size-3" />
+          {formatDate(log.createdAt)}
+        </p>
+        {log.category && <CategoryTag category={log.category} />}
+      </div>
       <p className="mt-3 text-base font-medium">
         「{log.content}」
       </p>
@@ -106,6 +240,7 @@ function DilemmaCard({ log }: { log: DilemmaLog }) {
 export default function HistoryPage() {
   const [logs, setLogs] = useState<DilemmaLog[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -114,6 +249,29 @@ export default function HistoryPage() {
     }, 0);
     return () => clearTimeout(timer);
   }, []);
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<Category, number> = {
+      career: 0,
+      relationship: 0,
+      time: 0,
+      self: 0,
+      daily: 0,
+    };
+    for (const log of logs) {
+      if (log.category) {
+        counts[log.category]++;
+      }
+    }
+    return counts;
+  }, [logs]);
+
+  const filteredLogs = useMemo(() => {
+    if (!selectedCategory) return logs;
+    return logs.filter((log) => log.category === selectedCategory);
+  }, [logs, selectedCategory]);
+
+  const hasCategorized = logs.some((l) => l.category);
 
   if (!loaded) {
     return (
@@ -149,12 +307,27 @@ export default function HistoryPage() {
               <EmptyState />
             ) : (
               <>
+                {hasCategorized && (
+                  <CategoryFilter
+                    selected={selectedCategory}
+                    onSelect={setSelectedCategory}
+                    counts={categoryCounts}
+                  />
+                )}
+                <PatternInsight logs={logs} />
                 <ProgressSection count={logs.length} />
                 <MotionSection {...staggerContainer} className="space-y-3">
-                  {logs.map((log) => (
+                  {filteredLogs.map((log) => (
                     <DilemmaCard key={log.id} log={log} />
                   ))}
                 </MotionSection>
+                {filteredLogs.length === 0 && selectedCategory && (
+                  <FadeInUp {...fadeInUp}>
+                    <p className="py-8 text-center text-sm text-muted-foreground">
+                      「{categoryConfig[selectedCategory].label}」の記録はまだありません
+                    </p>
+                  </FadeInUp>
+                )}
               </>
             )}
           </div>

@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import { AppShell, StickyHeader } from "@/components/app-shell";
 import { FadeInUp, fadeInUp } from "@/components/motion";
 import { Button } from "@/components/ui/button";
-import { addDilemmaLog } from "@/lib/dilemma-store";
+import { addDilemmaLog, updateDilemmaCategory } from "@/lib/dilemma-store";
 
 interface AxisEntry {
   label: string;
@@ -69,7 +69,7 @@ function ResultContent() {
     }
   }, [axes]);
 
-  // 迷いログをlocalStorageに保存
+  // 迷いログをlocalStorageに保存 & カテゴリ分類
   useEffect(() => {
     if (saved) return;
     let answer = "";
@@ -79,8 +79,22 @@ function ResultContent() {
         answer = followups[0]?.answer || "";
       } catch { /* ignore */ }
     }
-    addDilemmaLog(input, answer);
+    const log = addDilemmaLog(input, answer);
     setSaved(true);
+
+    // バックグラウンドでカテゴリ分類
+    fetch("/api/classify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dilemma: input }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.category) {
+          updateDilemmaCategory(log.id, data.category);
+        }
+      })
+      .catch(() => { /* 分類失敗は無視 */ });
   }, [input, answersParam, saved]);
 
   useEffect(() => {
@@ -208,9 +222,14 @@ function ResultContent() {
                 {!hasAxes && !error && (
                   <>
                     <div className="h-px bg-border/50" />
-                    <p className="text-sm text-muted-foreground">
-                      分析結果を取得できませんでした
-                    </p>
+                    <div className="space-y-2">
+                      <p className="text-base font-medium">
+                        最初の判断パターンを記録しました！
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        あと4回記録すると、あなたの判断軸が見えてきます
+                      </p>
+                    </div>
                   </>
                 )}
               </div>

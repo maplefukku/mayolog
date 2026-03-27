@@ -1,7 +1,10 @@
+export type Category = 'career' | 'relationship' | 'time' | 'self' | 'daily';
+
 export interface DilemmaLog {
   id: string;
   content: string;
   answer: string;
+  category?: Category;
   createdAt: string;
 }
 
@@ -25,15 +28,26 @@ export function getDilemmaLogs(): DilemmaLog[] {
 export function addDilemmaLog(
   content: string,
   answer: string,
+  category?: Category,
 ): DilemmaLog {
   const log: DilemmaLog = {
     id: generateId(),
     content,
     answer,
+    category,
     createdAt: new Date().toISOString(),
   };
   const logs = getDilemmaLogs();
   logs.unshift(log);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
   return log;
+}
+
+export function updateDilemmaCategory(id: string, category: Category): void {
+  const logs = getDilemmaLogs();
+  const log = logs.find((l) => l.id === id);
+  if (log) {
+    log.category = category;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+  }
 }
