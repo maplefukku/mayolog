@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { AppShell, StickyHeader } from "@/components/app-shell";
 import { FadeInUp, fadeInUp } from "@/components/motion";
@@ -14,7 +14,7 @@ interface Question {
   options: string[];
 }
 
-function getQuestions(input: string): Question[] {
+function getFallbackQuestions(input: string): Question[] {
   return [
     {
       text: `「${input}」ですね。\n今、どっちに傾いてる？`,
@@ -39,11 +39,68 @@ function QuestionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const input = searchParams.get("q") || "迷っていること";
-  const questions = getQuestions(input);
 
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentQ, setCurrentQ] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [answers, setAnswers] = useState<number[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchQuestions() {
+      try {
+        const res = await fetch("/api/question", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ dilemma: input }),
+        });
+
+        if (!cancelled) {
+          if (res.ok) {
+            const data = await res.json();
+            setQuestions(data.questions);
+          } else {
+            const data = await res.json().catch(() => null);
+            setError(data?.error || "質問の生成に失敗しました");
+            setQuestions(getFallbackQuestions(input));
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setError("通信エラーが発生しました");
+          setQuestions(getFallbackQuestions(input));
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    fetchQuestions();
+    return () => { cancelled = true; };
+  }, [input]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-full flex-col items-center justify-center gap-3">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        <p className="text-muted-foreground">AIが質問を考えています...</p>
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="flex min-h-full flex-col items-center justify-center gap-3">
+        <p className="text-muted-foreground">質問を生成できませんでした</p>
+        <Link href="/input">
+          <Button variant="outline">戻る</Button>
+        </Link>
+      </div>
+    );
+  }
 
   const question = questions[currentQ];
   const isLast = currentQ === questions.length - 1;
@@ -52,8 +109,14 @@ function QuestionContent() {
     if (selected === null) return;
     const newAnswers = [...answers, selected];
     if (isLast) {
+      const questionsParam = encodeURIComponent(
+        JSON.stringify(questions.map((q, i) => ({
+          question: q.text,
+          answer: q.options[newAnswers[i]] || "",
+        })))
+      );
       router.push(
-        `/result?q=${encodeURIComponent(input)}&a=${encodeURIComponent(JSON.stringify(newAnswers))}`
+        `/result?q=${encodeURIComponent(input)}&a=${questionsParam}`
       );
     } else {
       setAnswers(newAnswers);
@@ -76,6 +139,12 @@ function QuestionContent() {
 
       <main className="flex flex-1 flex-col py-8">
         <AppShell>
+          {error && (
+            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+              {error}（代わりの質問を表示しています）
+            </div>
+          )}
+
           {/* AI message */}
           <FadeInUp {...fadeInUp}>
             <div className="rounded-2xl border border-border/50 bg-card p-6 shadow-sm">

@@ -1,8 +1,8 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
 
 vi.mock('next/navigation', () => ({
-  useSearchParams: () => new URLSearchParams('q=転職するか迷ってる&a=[0,1]'),
+  useSearchParams: () => new URLSearchParams('q=転職するか迷ってる&a=%5B%5D'),
 }))
 
 vi.mock('next/link', () => ({
@@ -13,35 +13,91 @@ vi.mock('next/link', () => ({
 
 import ResultPage from '../result/page'
 
+const mockAxes = {
+  axes: [
+    { label: '安定より挑戦を選ぶ', evidence: ['新しい環境への興味が強い'] },
+    { label: '他者の期待より自分の直感を優先', evidence: ['自分の気持ちを重視する傾向'] },
+  ],
+}
+
+beforeEach(() => {
+  vi.restoreAllMocks()
+})
+
 describe('ResultPage', () => {
-  it('判断パターンカードが表示される', () => {
+  it('ローディング状態が表示される', () => {
+    global.fetch = vi.fn(() => new Promise(() => {})) as unknown as typeof fetch
     render(<ResultPage />)
+    expect(screen.getByText('AIが判断パターンを分析しています...')).toBeInTheDocument()
+  })
+
+  it('API成功時に判断パターンカードが表示される', async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockAxes),
+      })
+    ) as unknown as typeof fetch
+
+    render(<ResultPage />)
+    await waitFor(() => {
+      expect(screen.getByText('あなたの判断パターン')).toBeInTheDocument()
+    })
+    expect(screen.getByText(/転職するか迷ってる/)).toBeInTheDocument()
+    expect(screen.getAllByText(/安定より挑戦を選ぶ/).length).toBeGreaterThan(0)
+  })
+
+  it('API成功時に判断軸マップが表示される', async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockAxes),
+      })
+    ) as unknown as typeof fetch
+
+    render(<ResultPage />)
+    await waitFor(() => {
+      expect(screen.getByText('あなたの判断軸マップ')).toBeInTheDocument()
+    })
+    expect(screen.getByText('安定より挑戦を選ぶ')).toBeInTheDocument()
+    expect(screen.getByText('他者の期待より自分の直感を優先')).toBeInTheDocument()
+  })
+
+  it('APIエラー時にエラーメッセージが表示される', async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: false,
+        json: () => Promise.resolve({ error: '分析には5件以上のログが必要です' }),
+      })
+    ) as unknown as typeof fetch
+
+    render(<ResultPage />)
+    await waitFor(() => {
+      expect(screen.getByText('分析には5件以上のログが必要です')).toBeInTheDocument()
+    })
     expect(screen.getByText('あなたの判断パターン')).toBeInTheDocument()
   })
 
-  it('重視していること、判断の傾向、今日の気づきが表示される', () => {
+  it('ネットワークエラー時にエラーメッセージが表示される', async () => {
+    global.fetch = vi.fn(() => Promise.reject(new Error('Network error'))) as unknown as typeof fetch
+
     render(<ResultPage />)
-    expect(screen.getByText('重視していること')).toBeInTheDocument()
-    expect(screen.getAllByText(/自分の時間/).length).toBeGreaterThan(0)
-    expect(screen.getByText('判断の傾向')).toBeInTheDocument()
-    expect(screen.getByText(/慎重に検討する傾向がある/)).toBeInTheDocument()
-    expect(screen.getByText('今日の気づき')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('通信エラーが発生しました')).toBeInTheDocument()
+    })
   })
 
-  it('判断軸マップが表示される', () => {
-    render(<ResultPage />)
-    expect(screen.getByText('あなたの判断軸マップ')).toBeInTheDocument()
-    expect(screen.getByText('自由')).toBeInTheDocument()
-    expect(screen.getByText('安定')).toBeInTheDocument()
-    expect(screen.getByText('成長')).toBeInTheDocument()
-    expect(screen.getByText('収入')).toBeInTheDocument()
-  })
+  it('シェアボタンが表示される', async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockAxes),
+      })
+    ) as unknown as typeof fetch
 
-  it('プログレスバーが正しく描画される', () => {
     render(<ResultPage />)
-    expect(screen.getByText('80%')).toBeInTheDocument()
-    expect(screen.getByText('50%')).toBeInTheDocument()
-    expect(screen.getByText('40%')).toBeInTheDocument()
-    expect(screen.getByText('30%')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('シェアする')).toBeInTheDocument()
+    })
   })
 })

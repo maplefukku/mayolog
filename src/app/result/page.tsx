@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, BookmarkPlus, Share2 } from "lucide-react";
+import { ArrowLeft, BookmarkPlus, Loader2, Share2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { AppShell, StickyHeader } from "@/components/app-shell";
 import { FadeInUp, fadeInUp } from "@/components/motion";
@@ -11,28 +11,21 @@ import { Button } from "@/components/ui/button";
 
 interface AxisEntry {
   label: string;
-  value: number;
+  evidence: string[];
 }
 
-const mockAxes: AxisEntry[] = [
-  { label: "自由", value: 80 },
-  { label: "安定", value: 50 },
-  { label: "成長", value: 40 },
-  { label: "収入", value: 30 },
-];
-
-function AxisBar({ entry, delay }: { entry: AxisEntry; delay: number }) {
+function AxisBar({ label, index, delay }: { label: string; index: number; delay: number }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between text-sm">
-        <span className="font-medium">{entry.label}</span>
-        <span className="text-muted-foreground">{entry.value}%</span>
+        <span className="font-medium">{label}</span>
+        <span className="text-xs text-muted-foreground">軸 {index + 1}</span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
         <motion.div
           className="h-full rounded-full bg-foreground"
           initial={{ width: 0 }}
-          animate={{ width: `${entry.value}%` }}
+          animate={{ width: "100%" }}
           transition={{
             duration: 0.8,
             delay,
@@ -47,12 +40,66 @@ function AxisBar({ entry, delay }: { entry: AxisEntry; delay: number }) {
 function ResultContent() {
   const searchParams = useSearchParams();
   const input = searchParams.get("q") || "迷っていること";
+  const answersParam = searchParams.get("a");
 
-  const priority = "自分の時間";
-  const tendency = input.includes("断")
-    ? "断る方向に傾きやすい"
-    : "慎重に検討する傾向がある";
-  const insight = `自分の時間を大切にする傾向があります。「${input}」のような場面では、自由や余裕を重視して判断することが多いようです。`;
+  const [axes, setAxes] = useState<AxisEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchAnalysis() {
+      try {
+        let followups: { question: string; answer: string }[] = [];
+        if (answersParam) {
+          try {
+            followups = JSON.parse(decodeURIComponent(answersParam));
+          } catch {
+            // answersParam のパースに失敗した場合は空配列で続行
+          }
+        }
+
+        const res = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            logs: [{ content: input, followups }],
+          }),
+        });
+
+        if (!cancelled) {
+          if (res.ok) {
+            const data = await res.json();
+            setAxes(data.axes);
+          } else {
+            const data = await res.json().catch(() => null);
+            setError(data?.error || "分析に失敗しました");
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setError("通信エラーが発生しました");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    fetchAnalysis();
+    return () => { cancelled = true; };
+  }, [input, answersParam]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-full flex-col items-center justify-center gap-3">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        <p className="text-muted-foreground">AIが判断パターンを分析しています...</p>
+      </div>
+    );
+  }
+
+  const hasAxes = axes.length > 0;
 
   return (
     <div className="flex min-h-full flex-col">
@@ -79,54 +126,84 @@ function ResultContent() {
               </h1>
 
               <div className="mt-6 space-y-6">
-                <div className="space-y-1.5">
-                  <p className="text-sm text-muted-foreground">
-                    重視していること
-                  </p>
-                  <p className="text-lg font-semibold">「{priority}」</p>
-                </div>
-
-                <div className="h-px bg-border/50" />
+                {error && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                    {error}
+                  </div>
+                )}
 
                 <div className="space-y-1.5">
-                  <p className="text-sm text-muted-foreground">判断の傾向</p>
-                  <p className="text-lg font-semibold">「{tendency}」</p>
+                  <p className="text-sm text-muted-foreground">迷いの内容</p>
+                  <p className="text-lg font-semibold">「{input}」</p>
                 </div>
 
-                <div className="h-px bg-border/50" />
+                {hasAxes && (
+                  <>
+                    <div className="h-px bg-border/50" />
+                    <div className="space-y-1.5">
+                      <p className="text-sm text-muted-foreground">
+                        判断の傾向
+                      </p>
+                      <p className="text-lg font-semibold">
+                        「{axes[0].label}」
+                      </p>
+                    </div>
 
-                <div className="space-y-1.5">
-                  <p className="text-sm text-muted-foreground">今日の気づき</p>
-                  <p className="text-base leading-relaxed">「{insight}」</p>
-                </div>
+                    {axes[0].evidence.length > 0 && (
+                      <>
+                        <div className="h-px bg-border/50" />
+                        <div className="space-y-1.5">
+                          <p className="text-sm text-muted-foreground">
+                            今日の気づき
+                          </p>
+                          <p className="text-base leading-relaxed">
+                            「{axes[0].evidence[0]}」
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+
+                {!hasAxes && !error && (
+                  <>
+                    <div className="h-px bg-border/50" />
+                    <p className="text-sm text-muted-foreground">
+                      分析結果を取得できませんでした
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </FadeInUp>
 
           {/* Axis Map */}
-          <FadeInUp
-            {...fadeInUp}
-            transition={{ ...fadeInUp.transition, delay: 0.2 }}
-          >
-            <div className="mt-8">
-              <h2 className="text-lg font-semibold">あなたの判断軸マップ</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                3回以上の記録で表示されます（サンプル）
-              </p>
+          {hasAxes && (
+            <FadeInUp
+              {...fadeInUp}
+              transition={{ ...fadeInUp.transition, delay: 0.2 }}
+            >
+              <div className="mt-8">
+                <h2 className="text-lg font-semibold">あなたの判断軸マップ</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  AIが分析した判断軸
+                </p>
 
-              <div className="mt-4 rounded-2xl border border-border/50 bg-card p-6 shadow-sm">
-                <div className="space-y-4">
-                  {mockAxes.map((entry, i) => (
-                    <AxisBar
-                      key={entry.label}
-                      entry={entry}
-                      delay={0.4 + i * 0.15}
-                    />
-                  ))}
+                <div className="mt-4 rounded-2xl border border-border/50 bg-card p-6 shadow-sm">
+                  <div className="space-y-4">
+                    {axes.map((entry, i) => (
+                      <AxisBar
+                        key={entry.label}
+                        label={entry.label}
+                        index={i}
+                        delay={0.4 + i * 0.15}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          </FadeInUp>
+            </FadeInUp>
+          )}
 
           {/* Share */}
           <FadeInUp

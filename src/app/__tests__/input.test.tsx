@@ -56,8 +56,21 @@ describe('InputPage', () => {
     expect(button).not.toBeDisabled()
   })
 
-  it.skip('無効化ボタンにホバーするとツールチップが表示される', async () => {
-    // スキップ: Tooltipテストが不安定なため
+  it('無効化ボタンにホバーするとツールチップが表示される', async () => {
+    vi.useRealTimers()
+    const user = userEvent.setup()
+    render(<InputPage />)
+    const button = screen.getByText('AIに聞く')
+    expect(button).toBeDisabled()
+    const trigger = button.closest('[data-slot="tooltip-trigger"]') || button
+    await user.hover(trigger)
+    await waitFor(
+      () => {
+        expect(screen.getByText('迷いを入力してください')).toBeInTheDocument()
+      },
+      { timeout: 3000 },
+    )
+    vi.useFakeTimers()
   })
 
   it('"AIに聞く"ボタンクリックで /question に遷移する', () => {

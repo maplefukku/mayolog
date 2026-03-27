@@ -9,6 +9,7 @@ import { AppShell, StickyHeader } from "@/components/app-shell";
 import { FadeInUp, fadeInUp } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const placeholders = [
   "例: バイト断るか迷ってる",
@@ -98,24 +99,35 @@ export default function InputPage() {
             transition={{ ...fadeInUp.transition, delay: 0.3 }}
           >
             <div className="mt-8">
-              <motion.button
-                type="button"
-                whileHover={canSubmit ? { scale: 1.02 } : undefined}
-                whileTap={canSubmit ? { scale: 0.98 } : undefined}
-                disabled={!canSubmit}
-                onClick={() => {
-                  if (canSubmit) {
-                    router.push(
-                      `/question?q=${encodeURIComponent(trimmed)}`
-                    );
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span className="block w-full">
+                      <motion.button
+                        type="button"
+                        whileHover={canSubmit ? { scale: 1.02 } : undefined}
+                        whileTap={canSubmit ? { scale: 0.98 } : undefined}
+                        disabled={!canSubmit}
+                        onClick={() => {
+                          if (canSubmit) {
+                            router.push(
+                              `/question?q=${encodeURIComponent(trimmed)}`
+                            );
+                          }
+                        }}
+                        className="h-12 w-full rounded-full bg-primary text-base font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        AIに聞く
+                      </motion.button>
+                    </span>
                   }
-                }}
-                className="h-12 w-full rounded-full bg-primary text-base font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
-              >
-                AIに聞く
-              </motion.button>
-              <p className="mt-3 text-center text-sm text-muted-foreground">
-                1文字以上入力で開始できます
+                />
+                {!canSubmit && (
+                  <TooltipContent>迷いを入力してください</TooltipContent>
+                )}
+              </Tooltip>
+              <p className={`mt-3 text-center text-sm transition-colors ${canSubmit ? 'text-muted-foreground' : 'text-destructive font-medium'}`}>
+                {canSubmit ? '準備完了！' : '迷いを入力してください'}
               </p>
             </div>
           </FadeInUp>
