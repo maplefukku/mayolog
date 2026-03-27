@@ -108,8 +108,11 @@ export default function HistoryPage() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    setLogs(getDilemmaLogs());
-    setLoaded(true);
+    const timer = setTimeout(() => {
+      setLogs(getDilemmaLogs());
+      setLoaded(true);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   if (!loaded) {

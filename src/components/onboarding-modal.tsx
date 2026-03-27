@@ -14,10 +14,13 @@ export function OnboardingModal({ onComplete }: { onComplete: (sampleText?: stri
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    const onboarded = localStorage.getItem("mayolog_onboarded");
-    if (!onboarded) {
-      setIsOpen(true);
-    }
+    const timer = setTimeout(() => {
+      const onboarded = localStorage.getItem("mayolog_onboarded");
+      if (!onboarded) {
+        setIsOpen(true);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleSkip = () => {

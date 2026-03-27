@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, BookmarkPlus, Check, Clock, Loader2, Share2 } from "lucide-react";
+import { ArrowLeft, Check, Clock, Loader2, Share2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { AppShell, StickyHeader } from "@/components/app-shell";
 import { FadeInUp, fadeInUp } from "@/components/motion";
