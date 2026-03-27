@@ -184,6 +184,22 @@ function QuestionContent() {
     }
   }
 
+  function recordSkipEvent(questionText: string) {
+    const skipEvent = {
+      question: questionText,
+      input,
+      timestamp: new Date().toISOString(),
+    };
+    const existing = JSON.parse(localStorage.getItem("mayolog_skip_events") || "[]");
+    existing.push(skipEvent);
+    localStorage.setItem("mayolog_skip_events", JSON.stringify(existing));
+  }
+
+  function handleSkip() {
+    recordSkipEvent(question.text);
+    goToResult(answers);
+  }
+
   function handleGoToResult() {
     setShowDeepDiveChoice(false);
     goToResult(answers);
@@ -391,6 +407,13 @@ function QuestionContent() {
                     : "分析結果を見る"
                   : "次へ"}
               </motion.button>
+              <button
+                type="button"
+                onClick={handleSkip}
+                className="mt-3 w-full text-center text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                スキップして結果を見る
+              </button>
               <p className="mt-3 text-center text-sm text-muted-foreground">
                 質問 {currentQ + 1}/{questions.length}
                 {questions.length < MAX_QUESTIONS && (
