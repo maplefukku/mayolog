@@ -61,6 +61,7 @@ export default function InputPage() {
               onChange={(e) => setText(e.target.value)}
               maxLength={maxLength}
               placeholder={placeholders[placeholderIndex]}
+              aria-label="迷っていることを入力"
               className="mt-6 min-h-[120px] rounded-2xl border-border/50 bg-muted/50 text-base transition-colors focus-visible:bg-background"
             />
             {text.length > 0 && (
@@ -98,6 +99,7 @@ export default function InputPage() {
           >
             <div className="mt-8">
               <motion.button
+                type="button"
                 whileHover={canSubmit ? { scale: 1.02 } : undefined}
                 whileTap={canSubmit ? { scale: 0.98 } : undefined}
                 disabled={!canSubmit}

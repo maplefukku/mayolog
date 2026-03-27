@@ -7,6 +7,8 @@ const GLM_MODEL = process.env.GLM_MODEL ?? 'glm-4.7'
 export const glmClient = new OpenAI({
   apiKey: GLM_API_KEY,
   baseURL: GLM_BASE_URL,
+  timeout: 30_000,
+  maxRetries: 2,
 })
 
 export { GLM_MODEL }

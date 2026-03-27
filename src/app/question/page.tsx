@@ -96,6 +96,8 @@ function QuestionContent() {
           {/* Options */}
           <motion.div
             key={currentQ}
+            role="radiogroup"
+            aria-label={question.text}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.15 }}
@@ -104,6 +106,9 @@ function QuestionContent() {
             {question.options.map((option, i) => (
               <button
                 key={i}
+                type="button"
+                role="radio"
+                aria-checked={selected === i}
                 onClick={() => setSelected(i)}
                 className={`w-full rounded-2xl border p-4 text-left text-base transition-all ${
                   selected === i
@@ -113,6 +118,7 @@ function QuestionContent() {
               >
                 <span className="flex items-center gap-3">
                   <span
+                    aria-hidden="true"
                     className={`flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
                       selected === i
                         ? "border-foreground bg-foreground"
@@ -140,6 +146,7 @@ function QuestionContent() {
           >
             <div className="mt-8">
               <motion.button
+                type="button"
                 whileHover={selected !== null ? { scale: 1.02 } : undefined}
                 whileTap={selected !== null ? { scale: 0.98 } : undefined}
                 disabled={selected === null}

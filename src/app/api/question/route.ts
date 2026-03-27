@@ -70,6 +70,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(parsed)
   } catch (error) {
     console.error('Question generation failed:', error)
+
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { error: 'AIからの応答を解析できませんでした' },
+        { status: 502 },
+      )
+    }
+
+    const isTimeout = error instanceof Error && error.message.includes('timed out')
+    if (isTimeout) {
+      return NextResponse.json(
+        { error: 'AIの応答がタイムアウトしました。しばらく待ってから再度お試しください。' },
+        { status: 504 },
+      )
+    }
+
     return NextResponse.json(
       { error: 'AI質問生成に失敗しました。質問なしで記録を続けてください。' },
       { status: 500 },

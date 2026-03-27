@@ -136,9 +136,10 @@ function ResultContent() {
             <div className="mt-8">
               <Button
                 variant="outline"
+                aria-label="判断パターンをシェアする"
                 className="h-12 w-full rounded-full text-base font-semibold"
               >
-                <Share2 className="size-4" />
+                <Share2 className="size-4" aria-hidden="true" />
                 シェアする
               </Button>
             </div>
