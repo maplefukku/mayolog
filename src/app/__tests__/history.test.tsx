@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor, act, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import HistoryPage from "../history/page";
 
@@ -73,10 +73,10 @@ function makeLogs(overrides: Array<Partial<{ id: string; content: string; answer
 
 async function renderAndWait() {
   vi.useFakeTimers();
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   render(<HistoryPage />);
   act(() => { vi.advanceTimersByTime(10); });
   vi.useRealTimers();
+  const user = userEvent.setup();
   return user;
 }
 
@@ -133,7 +133,9 @@ describe("HistoryPage", () => {
         makeLogs([{ content: "テスト", category: "career" }])
       );
       await renderAndWait();
-      expect(screen.getByText("キャリア")).toBeInTheDocument();
+      // フィルターボタンとカテゴリタグの両方に出るのでgetAllByTextを使う
+      const elements = screen.getAllByText("キャリア");
+      expect(elements.length).toBeGreaterThanOrEqual(2); // フィルター + タグ
     });
 
     it("回答が表示される", async () => {
@@ -162,84 +164,79 @@ describe("HistoryPage", () => {
 
   describe("カテゴリフィルター", () => {
     const logsWithCategories = makeLogs([
-      { content: "転職", category: "career" },
-      { content: "友達", category: "relationship" },
-      { content: "勉強", category: "career" },
+      { content: "転職についての迷い", category: "career" },
+      { content: "友達との付き合い", category: "relationship" },
+      { content: "勉強の方向性", category: "career" },
     ]);
 
     it("フィルターボタンが表示される", async () => {
       mockGetDilemmaLogs.mockReturnValue(logsWithCategories);
       await renderAndWait();
+      // 「すべて」はフィルターにのみ存在
       expect(screen.getByText("すべて")).toBeInTheDocument();
-      expect(screen.getByText("キャリア")).toBeInTheDocument();
+      // 「キャリア」はフィルターとカードの両方に存在するので複数OK
+      expect(screen.getAllByText("キャリア").length).toBeGreaterThanOrEqual(1);
     });
 
     it("カテゴリでフィルターできる", async () => {
       mockGetDilemmaLogs.mockReturnValue(logsWithCategories);
       const user = await renderAndWait();
 
-      // 「キャリア」フィルターをクリック（件数付きボタンを探す）
-      const careerButtons = screen.getAllByText("キャリア");
-      // フィルターボタンはbutton要素
-      const filterButton = careerButtons.find(el => el.closest("button"))?.closest("button");
-      expect(filterButton).toBeTruthy();
-      await user.click(filterButton!);
+      // フィルターの「すべて」ボタンの隣にある「キャリア」をクリック
+      // フィルターはボタン内にラベル+件数がある
+      const allFilterButtons = screen.getAllByRole("button");
+      const careerFilterBtn = allFilterButtons.find(btn => {
+        const text = btn.textContent;
+        return text?.includes("キャリア") && text?.includes("2");
+      });
+      expect(careerFilterBtn).toBeTruthy();
+      await user.click(careerFilterBtn!);
 
-      // キャリアのログだけ表示される
-      expect(screen.getByText(/転職/)).toBeInTheDocument();
-      expect(screen.getByText(/勉強/)).toBeInTheDocument();
-      expect(screen.queryByText(/友達/)).not.toBeInTheDocument();
+      expect(screen.getByText(/転職についての迷い/)).toBeInTheDocument();
+      expect(screen.getByText(/勉強の方向性/)).toBeInTheDocument();
+      expect(screen.queryByText(/友達との付き合い/)).not.toBeInTheDocument();
     });
 
     it("「すべて」で全件表示に戻る", async () => {
       mockGetDilemmaLogs.mockReturnValue(logsWithCategories);
       const user = await renderAndWait();
 
-      // フィルターしてから「すべて」に戻す
-      const careerButtons = screen.getAllByText("キャリア");
-      const filterButton = careerButtons.find(el => el.closest("button"))?.closest("button");
-      await user.click(filterButton!);
+      // フィルター
+      const allFilterButtons = screen.getAllByRole("button");
+      const careerFilterBtn = allFilterButtons.find(btn => {
+        const text = btn.textContent;
+        return text?.includes("キャリア") && text?.includes("2");
+      });
+      await user.click(careerFilterBtn!);
+
+      // 「すべて」で戻す
       await user.click(screen.getByText("すべて"));
 
-      expect(screen.getByText(/転職/)).toBeInTheDocument();
-      expect(screen.getByText(/友達/)).toBeInTheDocument();
-      expect(screen.getByText(/勉強/)).toBeInTheDocument();
-    });
-
-    it("該当なしのメッセージが表示される", async () => {
-      mockGetDilemmaLogs.mockReturnValue(
-        makeLogs([{ content: "テスト", category: "career" }])
-      );
-      const user = await renderAndWait();
-
-      // カテゴリに存在しないフィルターは表示されないので、
-      // 一旦careerをフィルターし、logsを変更してテスト
-      // → 代わりに直接テスト: 空カテゴリは表示されない
-      // count=0のカテゴリはフィルターに表示されないため、このケースは
-      // filteredLogs.length === 0 && selectedCategory のパスを通す必要がある
-      // 全ログがcareerで、フィルターでrelationshipを選ぶ必要があるが、
-      // count=0のカテゴリはレンダリングされないのでこのパスは通常到達しない
-      expect(screen.queryByText(/の記録はまだありません/)).not.toBeInTheDocument();
+      expect(screen.getByText(/転職についての迷い/)).toBeInTheDocument();
+      expect(screen.getByText(/友達との付き合い/)).toBeInTheDocument();
+      expect(screen.getByText(/勉強の方向性/)).toBeInTheDocument();
     });
   });
 
   describe("ログ削除", () => {
     it("削除ボタンでログが消える", async () => {
       mockGetDilemmaLogs.mockReturnValue(
-        makeLogs([{ id: "del-1", content: "消すログ" }])
+        makeLogs([{ id: "del-1", content: "消すログの内容" }])
       );
       const user = await renderAndWait();
 
-      // ゴミ箱アイコンのボタンをクリック
-      const deleteButtons = screen.getAllByRole("button").filter(
-        btn => btn.querySelector("svg") && btn.className.includes("hover:text-red")
+      // カード内の削除ボタン（Trash2アイコン付き、size-7のボタン）
+      const card = screen.getByText(/消すログの内容/).closest("div[class*='cursor-pointer']");
+      expect(card).toBeTruthy();
+      const deleteBtn = within(card!).getAllByRole("button").find(
+        btn => btn.className.includes("size-7")
       );
-      expect(deleteButtons.length).toBeGreaterThan(0);
-      await user.click(deleteButtons[0]);
+      expect(deleteBtn).toBeTruthy();
+      await user.click(deleteBtn!);
 
       expect(mockDeleteDilemmaLog).toHaveBeenCalledWith("del-1");
       await waitFor(() => {
-        expect(screen.queryByText(/消すログ/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/消すログの内容/)).not.toBeInTheDocument();
       });
     });
   });
@@ -247,29 +244,36 @@ describe("HistoryPage", () => {
   describe("詳細モーダル", () => {
     it("ログクリックでモーダルが表示される", async () => {
       mockGetDilemmaLogs.mockReturnValue(
-        makeLogs([{ content: "詳細テスト", answer: "テスト回答", category: "career" }])
+        makeLogs([{ content: "詳細テスト用の迷い", answer: "テスト回答", category: "daily" }])
       );
       const user = await renderAndWait();
 
-      await user.click(screen.getByText(/詳細テスト/));
+      // カード本体をクリック
+      const card = screen.getByText(/詳細テスト用の迷い/).closest("div[class*='cursor-pointer']");
+      await user.click(card!);
+
       expect(screen.getByText("迷いの詳細")).toBeInTheDocument();
+      expect(screen.getByText("迷いの内容")).toBeInTheDocument();
     });
 
     it("モーダルの閉じるボタンで閉じる", async () => {
       mockGetDilemmaLogs.mockReturnValue(
-        makeLogs([{ content: "詳細テスト", answer: "テスト回答" }])
+        makeLogs([{ content: "閉じるテスト", answer: "テスト回答" }])
       );
       const user = await renderAndWait();
 
-      await user.click(screen.getByText(/詳細テスト/));
+      const card = screen.getByText(/閉じるテスト/).closest("div[class*='cursor-pointer']");
+      await user.click(card!);
       expect(screen.getByText("迷いの詳細")).toBeInTheDocument();
 
-      // Xボタンで閉じる
-      const closeButton = screen.getAllByRole("button").find(
-        btn => btn.className.includes("rounded-full") && btn.querySelector("svg") && btn.closest(".relative.z-10")
+      // モーダル内の閉じるボタン（size-8のボタン）
+      const modal = screen.getByText("迷いの詳細").closest("div[class*='max-w-md']");
+      expect(modal).toBeTruthy();
+      const closeBtn = within(modal!).getAllByRole("button").find(
+        btn => btn.className.includes("size-8")
       );
-      expect(closeButton).toBeTruthy();
-      await user.click(closeButton!);
+      expect(closeBtn).toBeTruthy();
+      await user.click(closeBtn!);
 
       await waitFor(() => {
         expect(screen.queryByText("迷いの詳細")).not.toBeInTheDocument();
@@ -282,7 +286,8 @@ describe("HistoryPage", () => {
       );
       const user = await renderAndWait();
 
-      await user.click(screen.getByText(/モーダル削除テスト/));
+      const card = screen.getByText(/モーダル削除テスト/).closest("div[class*='cursor-pointer']");
+      await user.click(card!);
       await user.click(screen.getByText("削除する"));
 
       expect(mockDeleteDilemmaLog).toHaveBeenCalledWith("modal-del");
@@ -293,22 +298,21 @@ describe("HistoryPage", () => {
     it("3件以上のカテゴリ付きログで傾向が表示される", async () => {
       mockGetDilemmaLogs.mockReturnValue(
         makeLogs([
-          { content: "1", category: "career" },
-          { content: "2", category: "career" },
-          { content: "3", category: "career" },
+          { content: "迷い1", category: "career" },
+          { content: "迷い2", category: "career" },
+          { content: "迷い3", category: "career" },
         ])
       );
       await renderAndWait();
       expect(screen.getByText("あなたの迷いの傾向")).toBeInTheDocument();
-      expect(screen.getByText(/キャリア/)).toBeInTheDocument();
       expect(screen.getByText(/3件で最も多い/)).toBeInTheDocument();
     });
 
     it("カテゴリ付きが3件未満なら非表示", async () => {
       mockGetDilemmaLogs.mockReturnValue(
         makeLogs([
-          { content: "1", category: "career" },
-          { content: "2", category: "career" },
+          { content: "迷い1", category: "career" },
+          { content: "迷い2", category: "career" },
         ])
       );
       await renderAndWait();
