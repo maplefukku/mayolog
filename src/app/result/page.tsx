@@ -9,6 +9,7 @@ import { AppShell, StickyHeader } from "@/components/app-shell";
 import { FadeInUp, fadeInUp } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { addDilemmaLog, updateDilemmaCategory } from "@/lib/dilemma-store";
+import { addAxisSnapshot } from "@/lib/axis-history";
 
 interface AxisEntry {
   label: string;
@@ -123,6 +124,14 @@ function ResultContent() {
           if (res.ok) {
             const data = await res.json();
             setAxes(data.axes);
+            // 軸マップスナップショットを保存
+            if (data.axes && data.axes.length > 0) {
+              const snapshotAxes = data.axes.map((a: AxisEntry, i: number) => ({
+                label: a.label,
+                value: Math.max(10, 100 - i * 20),
+              }));
+              addAxisSnapshot(snapshotAxes);
+            }
           } else {
             const data = await res.json().catch(() => null);
             setError(data?.error || "分析に失敗しました");

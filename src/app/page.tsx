@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Zap, MessageCircle, Compass, Clock, FileText } from "lucide-react";
+import { Zap, MessageCircle, Compass, Clock, FileText, TrendingUp } from "lucide-react";
 import { AppShell, StickyHeader } from "@/components/app-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -39,6 +39,13 @@ export default function Home() {
           MayoLog
         </span>
         <div className="flex items-center gap-2">
+          <Link
+            href="/growth"
+            aria-label="成長グラフ"
+            className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <TrendingUp className="size-4" />
+          </Link>
           <Link
             href="/es"
             aria-label="ES生成"
