@@ -280,7 +280,7 @@ describe("HistoryPage", () => {
       });
     });
 
-    it("モーダルから削除できる", async () => {
+    it("モーダルから削除できる（確認ダイアログ経由）", async () => {
       mockGetDilemmaLogs.mockReturnValue(
         makeLogs([{ id: "modal-del", content: "モーダル削除テスト" }])
       );
@@ -288,9 +288,35 @@ describe("HistoryPage", () => {
 
       const card = screen.getByText(/モーダル削除テスト/).closest("div[class*='cursor-pointer']");
       await user.click(card!);
+
+      // 最初の「削除する」クリックで確認ダイアログが出る
+      await user.click(screen.getByText("削除する"));
+      expect(screen.getByText("この記録を削除しますか？")).toBeInTheDocument();
+      expect(screen.getByText("この操作は取り消せません")).toBeInTheDocument();
+      expect(mockDeleteDilemmaLog).not.toHaveBeenCalled();
+
+      // 確認ダイアログの「削除する」で実際に削除
+      await user.click(screen.getByText("削除する"));
+      expect(mockDeleteDilemmaLog).toHaveBeenCalledWith("modal-del");
+    });
+
+    it("削除確認でキャンセルすると削除されない", async () => {
+      mockGetDilemmaLogs.mockReturnValue(
+        makeLogs([{ id: "cancel-del", content: "キャンセルテスト" }])
+      );
+      const user = await renderAndWait();
+
+      const card = screen.getByText(/キャンセルテスト/).closest("div[class*='cursor-pointer']");
+      await user.click(card!);
       await user.click(screen.getByText("削除する"));
 
-      expect(mockDeleteDilemmaLog).toHaveBeenCalledWith("modal-del");
+      expect(screen.getByText("この記録を削除しますか？")).toBeInTheDocument();
+      await user.click(screen.getByText("キャンセル"));
+
+      await waitFor(() => {
+        expect(screen.queryByText("この記録を削除しますか？")).not.toBeInTheDocument();
+      });
+      expect(mockDeleteDilemmaLog).not.toHaveBeenCalled();
     });
   });
 
