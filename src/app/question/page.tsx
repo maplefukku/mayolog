@@ -3,8 +3,8 @@
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { ArrowLeft, Loader2, ChevronDown } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { AppShell, StickyHeader } from "@/components/app-shell";
 import { FadeInUp, fadeInUp } from "@/components/motion";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ interface Question {
   text: string;
   options: string[];
 }
+
+const MAX_QUESTIONS = 5;
 
 function getFallbackQuestions(input: string): Question[] {
   return [
@@ -43,9 +45,12 @@ function QuestionContent() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  void error; // Used for debugging
   const [currentQ, setCurrentQ] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [answers, setAnswers] = useState<number[]>([]);
+  const [deepDiveLoading, setDeepDiveLoading] = useState(false);
+  const [showDeepDiveChoice, setShowDeepDiveChoice] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,25 +109,165 @@ function QuestionContent() {
 
   const question = questions[currentQ];
   const isLast = currentQ === questions.length - 1;
+  const totalAnswered = answers.length;
+  const canDeepDive = questions.length < MAX_QUESTIONS;
+
+  function buildHistory(newAnswers: number[]) {
+    return questions.slice(0, newAnswers.length).map((q, i) => ({
+      question: q.text,
+      answer: q.options[newAnswers[i]] || "",
+    }));
+  }
+
+  function goToResult(finalAnswers: number[]) {
+    const questionsParam = encodeURIComponent(
+      JSON.stringify(questions.map((q, i) => ({
+        question: q.text,
+        answer: q.options[finalAnswers[i]] || "",
+      })))
+    );
+    router.push(
+      `/result?q=${encodeURIComponent(input)}&a=${questionsParam}`
+    );
+  }
 
   function handleNext() {
     if (selected === null) return;
     const newAnswers = [...answers, selected];
+
     if (isLast) {
-      const questionsParam = encodeURIComponent(
-        JSON.stringify(questions.map((q, i) => ({
-          question: q.text,
-          answer: q.options[newAnswers[i]] || "",
-        })))
-      );
-      router.push(
-        `/result?q=${encodeURIComponent(input)}&a=${questionsParam}`
-      );
+      if (canDeepDive) {
+        // Show deep dive choice instead of navigating
+        setAnswers(newAnswers);
+        setShowDeepDiveChoice(true);
+      } else {
+        // Max questions reached, go to result
+        goToResult(newAnswers);
+      }
     } else {
       setAnswers(newAnswers);
       setSelected(null);
       setCurrentQ((prev) => prev + 1);
     }
+  }
+
+  async function handleDeepDive() {
+    setDeepDiveLoading(true);
+    setShowDeepDiveChoice(false);
+
+    try {
+      const res = await fetch("/api/question", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dilemma: input,
+          history: buildHistory(answers),
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.questions && data.questions.length > 0) {
+          setQuestions((prev) => [...prev, data.questions[0]]);
+          setSelected(null);
+          setCurrentQ(questions.length);
+        }
+      } else {
+        // Fallback: go to result if deep dive fails
+        goToResult(answers);
+      }
+    } catch {
+      goToResult(answers);
+    } finally {
+      setDeepDiveLoading(false);
+    }
+  }
+
+  function handleGoToResult() {
+    setShowDeepDiveChoice(false);
+    goToResult(answers);
+  }
+
+  // Deep dive loading state
+  if (deepDiveLoading) {
+    return (
+      <div className="flex min-h-full flex-col items-center justify-center gap-3">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        <p className="text-muted-foreground">さらに深い質問を考えています...</p>
+      </div>
+    );
+  }
+
+  // Deep dive choice screen
+  if (showDeepDiveChoice) {
+    return (
+      <div className="flex min-h-full flex-col">
+        <StickyHeader>
+          <Link href="/input">
+            <Button variant="ghost" size="sm" className="gap-1.5">
+              <ArrowLeft className="size-4" />
+              戻る
+            </Button>
+          </Link>
+          <span />
+        </StickyHeader>
+
+        <main className="flex flex-1 flex-col items-center justify-center py-8">
+          <AppShell>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="flex flex-col items-center gap-6"
+            >
+              <div className="rounded-2xl border border-border/50 bg-card p-6 shadow-sm w-full">
+                <div className="mb-3 flex items-center gap-2">
+                  <div className="flex size-6 items-center justify-center rounded-full bg-foreground text-xs font-bold text-background">
+                    AI
+                  </div>
+                  <span className="text-sm font-medium text-muted-foreground">
+                    MayoLog AI
+                  </span>
+                </div>
+                <p className="text-base leading-relaxed">
+                  ここまでの回答で分析できますが、もう少し深掘りすると、より正確な結果が出せます。
+                </p>
+              </div>
+
+              <div className="flex w-full flex-col gap-3">
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleGoToResult}
+                  className="h-12 w-full rounded-full bg-primary text-base font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  分析結果を見る
+                </motion.button>
+
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleDeepDive}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-border bg-background text-base font-medium text-foreground transition-colors hover:bg-muted"
+                >
+                  <ChevronDown className="size-4" />
+                  もっと深掘りする
+                  <span className="text-xs text-muted-foreground">
+                    （あと{MAX_QUESTIONS - questions.length}問）
+                  </span>
+                </motion.button>
+              </div>
+
+              <p className="text-center text-sm text-muted-foreground">
+                質問 {questions.length}/{MAX_QUESTIONS} 回答済み
+              </p>
+            </motion.div>
+          </AppShell>
+        </main>
+      </div>
+    );
   }
 
   return (
@@ -216,10 +361,19 @@ function QuestionContent() {
                 onClick={handleNext}
                 className="h-12 w-full rounded-full bg-primary text-base font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
               >
-                {isLast ? "結果を見る" : "次へ"}
+                {isLast
+                  ? canDeepDive
+                    ? "次へ"
+                    : "分析結果を見る"
+                  : "次へ"}
               </motion.button>
               <p className="mt-3 text-center text-sm text-muted-foreground">
                 質問 {currentQ + 1}/{questions.length}
+                {questions.length < MAX_QUESTIONS && (
+                  <span className="text-muted-foreground/60">
+                    {" "}（最大{MAX_QUESTIONS}問）
+                  </span>
+                )}
               </p>
             </div>
           </FadeInUp>

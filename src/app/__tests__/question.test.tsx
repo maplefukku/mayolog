@@ -136,10 +136,10 @@ describe('QuestionPage', () => {
     fireEvent.click(screen.getByText('次へ'))
 
     expect(screen.getByText(/後悔しないとしたら/)).toBeInTheDocument()
-    expect(screen.getByText('質問 2/2')).toBeInTheDocument()
+    expect(screen.getByText(/質問 2\/2/)).toBeInTheDocument()
   })
 
-  it('最後の質問後に"結果を見る"で /result に遷移する', async () => {
+  it('最後の質問後に深掘り選択画面が表示される', async () => {
     global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: true,
@@ -157,10 +157,74 @@ describe('QuestionPage', () => {
     fireEvent.click(screen.getByText('次へ'))
     // Q2
     fireEvent.click(screen.getByText('それでも今の傾きと同じ方を選ぶ'))
-    fireEvent.click(screen.getByText('結果を見る'))
+    fireEvent.click(screen.getByText('次へ'))
+
+    // Deep dive choice screen
+    expect(screen.getByText('分析結果を見る')).toBeInTheDocument()
+    expect(screen.getByText(/もっと深掘りする/)).toBeInTheDocument()
+  })
+
+  it('深掘り選択画面から"分析結果を見る"で /result に遷移する', async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockQuestions),
+      })
+    ) as unknown as typeof fetch
+
+    render(<QuestionPage />)
+    await waitFor(() => {
+      expect(screen.getByText('断る方に少し傾いてる')).toBeInTheDocument()
+    })
+
+    // Q1
+    fireEvent.click(screen.getByText('断る方に少し傾いてる'))
+    fireEvent.click(screen.getByText('次へ'))
+    // Q2
+    fireEvent.click(screen.getByText('それでも今の傾きと同じ方を選ぶ'))
+    fireEvent.click(screen.getByText('次へ'))
+
+    // Click 分析結果を見る
+    fireEvent.click(screen.getByText('分析結果を見る'))
 
     expect(mockPush).toHaveBeenCalledWith(
       expect.stringContaining('/result?q=')
     )
+  })
+
+  it('深掘りボタンで追加質問が表示される', async () => {
+    const deepDiveQuestion = {
+      questions: [
+        { text: 'この選択で一番怖いことは？', options: ['失敗すること', '後悔すること', '変化そのもの'] },
+      ],
+    }
+
+    let callCount = 0
+    global.fetch = vi.fn(() => {
+      callCount++
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(callCount === 1 ? mockQuestions : deepDiveQuestion),
+      })
+    }) as unknown as typeof fetch
+
+    render(<QuestionPage />)
+    await waitFor(() => {
+      expect(screen.getByText('断る方に少し傾いてる')).toBeInTheDocument()
+    })
+
+    // Q1
+    fireEvent.click(screen.getByText('断る方に少し傾いてる'))
+    fireEvent.click(screen.getByText('次へ'))
+    // Q2
+    fireEvent.click(screen.getByText('それでも今の傾きと同じ方を選ぶ'))
+    fireEvent.click(screen.getByText('次へ'))
+
+    // Click deep dive
+    fireEvent.click(screen.getByText(/もっと深掘りする/))
+
+    await waitFor(() => {
+      expect(screen.getByText('この選択で一番怖いことは？')).toBeInTheDocument()
+    })
   })
 })

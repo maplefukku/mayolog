@@ -20,10 +20,26 @@ const SYSTEM_PROMPT = `あなたは意思決定をサポートするカウンセ
 出力フォーマット:
 {"questions":[{"text":"質問文","options":["選択肢1","選択肢2"]}]}`
 
+const DEEPDIVE_SYSTEM_PROMPT = `あなたは意思決定をサポートするカウンセラーです。
+ユーザーの迷いと、これまでの質問・回答の履歴をもとに、さらに深い本音を引き出す追加質問を1問だけ作成してください。
+
+ルール:
+- 質問は1問のみ
+- 2〜3個の選択肢をつける
+- これまでの回答を踏まえて、より核心に迫る質問にする
+- 過去の質問と重複しない
+- 回答はJSON形式のみ（説明不要）
+
+出力フォーマット:
+{"questions":[{"text":"質問文","options":["選択肢1","選択肢2"]}]}`
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { dilemma } = body as { dilemma: string }
+    const { dilemma, history } = body as {
+      dilemma: string
+      history?: { question: string; answer: string }[]
+    }
 
     if (!dilemma || typeof dilemma !== 'string' || dilemma.trim().length === 0) {
       return NextResponse.json(
@@ -39,11 +55,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const isDeepDive = Array.isArray(history) && history.length > 0
+    const systemPrompt = isDeepDive ? DEEPDIVE_SYSTEM_PROMPT : SYSTEM_PROMPT
+    const userContent = isDeepDive
+      ? `迷い: ${dilemma}\n\nこれまでの質問と回答:\n${history.map((h, i) => `Q${i + 1}: ${h.question}\nA${i + 1}: ${h.answer}`).join('\n')}`
+      : dilemma
+
     const completion = await glmClient.chat.completions.create({
       model: GLM_MODEL,
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: dilemma },
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent },
       ],
       temperature: 0.7,
       max_tokens: 512,

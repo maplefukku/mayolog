@@ -64,6 +64,33 @@ describe('POST /api/question', () => {
     expect(res.status).toBe(502)
   })
 
+  it('深掘りリクエストでhistoryを含むプロンプトを送信する', async () => {
+    const mockResponse = {
+      questions: [
+        { text: 'この選択で一番怖いことは？', options: ['失敗すること', '後悔すること'] },
+      ],
+    }
+    mockCreate.mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify(mockResponse) } }],
+    })
+
+    const { POST } = await import('@/app/api/question/route')
+    const res = await POST(makeRequest({
+      dilemma: '転職すべきか迷っている',
+      history: [
+        { question: '一番手放したくないものは？', answer: '安定した収入' },
+      ],
+    }))
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.questions).toHaveLength(1)
+    // Verify the call used the deep-dive system prompt by checking the user message includes history
+    const callArgs = mockCreate.mock.calls[0][0]
+    expect(callArgs.messages[1].content).toContain('これまでの質問と回答')
+    expect(callArgs.messages[1].content).toContain('安定した収入')
+  })
+
   it('API呼び出し失敗時に500を返す', async () => {
     mockCreate.mockRejectedValue(new Error('API error'))
 
