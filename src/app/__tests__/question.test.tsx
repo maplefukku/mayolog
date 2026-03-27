@@ -67,9 +67,8 @@ describe('QuestionPage', () => {
 
     render(<QuestionPage />)
     await waitFor(() => {
-      expect(screen.getByText(/代わりの質問を表示しています/)).toBeInTheDocument()
+      expect(screen.getByText(/バイト断るか迷ってる/)).toBeInTheDocument()
     })
-    expect(screen.getByText(/バイト断るか迷ってる/)).toBeInTheDocument()
   })
 
   it('ネットワークエラー時にフォールバック質問が表示される', async () => {
@@ -77,9 +76,8 @@ describe('QuestionPage', () => {
 
     render(<QuestionPage />)
     await waitFor(() => {
-      expect(screen.getByText(/通信エラーが発生しました/)).toBeInTheDocument()
+      expect(screen.getByText(/バイト断るか迷ってる/)).toBeInTheDocument()
     })
-    expect(screen.getByText(/バイト断るか迷ってる/)).toBeInTheDocument()
   })
 
   it('選択肢を選択できる', async () => {

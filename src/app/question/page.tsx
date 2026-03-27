@@ -139,12 +139,6 @@ function QuestionContent() {
 
       <main className="flex flex-1 flex-col py-8">
         <AppShell>
-          {error && (
-            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-              {error}（代わりの質問を表示しています）
-            </div>
-          )}
-
           {/* AI message */}
           <FadeInUp {...fadeInUp}>
             <div className="rounded-2xl border border-border/50 bg-card p-6 shadow-sm">
