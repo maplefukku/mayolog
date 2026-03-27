@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, Clock, ExternalLink, Loader2, Share2 } from "lucide-react";
+import { ArrowLeft, Check, Clock, ExternalLink, Loader2, Share2, ThumbsUp, ThumbsDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { AppShell, StickyHeader } from "@/components/app-shell";
 import { FadeInUp, fadeInUp } from "@/components/motion";
@@ -49,6 +49,20 @@ function ResultContent() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [feedbackGiven, setFeedbackGiven] = useState<'good' | 'bad' | null>(null);
+
+  const handleFeedback = useCallback((type: 'good' | 'bad') => {
+    setFeedbackGiven(type);
+    const feedback = {
+      axes,
+      feedback: type,
+      timestamp: new Date().toISOString(),
+      input,
+    };
+    const existing = JSON.parse(localStorage.getItem('mayolog_feedback') || '[]');
+    existing.push(feedback);
+    localStorage.setItem('mayolog_feedback', JSON.stringify(existing));
+  }, [axes, input]);
 
   const handleShare = useCallback(async () => {
     const shareText = `私の判断パターン: 「${axes[0]?.label || "分析中"}」\n#MayoLog`;
@@ -269,6 +283,50 @@ function ResultContent() {
                     ))}
                   </div>
                 </div>
+              </div>
+            </FadeInUp>
+          )}
+
+          {/* Feedback */}
+          {hasAxes && (
+            <FadeInUp
+              {...fadeInUp}
+              transition={{ ...fadeInUp.transition, delay: 0.3 }}
+            >
+              <div className="mt-8">
+                {!feedbackGiven ? (
+                  <div className="space-y-3">
+                    <p className="text-center text-sm text-muted-foreground">
+                      この分析はしっくりきましたか？
+                    </p>
+                    <div className="flex gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => handleFeedback('good')}
+                        className="h-12 flex-1 gap-2 rounded-full border-emerald-200 text-emerald-700 hover:bg-emerald-600 hover:text-white dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-700"
+                      >
+                        <ThumbsUp className="size-4" />
+                        しっくりくる
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => handleFeedback('bad')}
+                        className="h-12 flex-1 gap-2 rounded-full border-orange-200 text-orange-700 hover:bg-orange-600 hover:text-white dark:border-orange-800 dark:text-orange-300 dark:hover:bg-orange-700"
+                      >
+                        <ThumbsDown className="size-4" />
+                        ピンとこない
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-2xl bg-emerald-50 p-4 text-center text-sm text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
+                  >
+                    フィードバックありがとうございます！
+                  </motion.div>
+                )}
               </div>
             </FadeInUp>
           )}
