@@ -43,6 +43,12 @@ export function addDilemmaLog(
   return log;
 }
 
+export function deleteDilemmaLog(id: string): void {
+  const logs = getDilemmaLogs();
+  const filtered = logs.filter((log) => log.id !== id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+}
+
 export function updateDilemmaCategory(id: string, category: Category): void {
   const logs = getDilemmaLogs();
   const log = logs.find((l) => l.id === id);

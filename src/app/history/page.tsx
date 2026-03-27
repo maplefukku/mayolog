@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Clock, Lightbulb, PenLine } from "lucide-react";
-import { motion } from "framer-motion";
+import { ArrowLeft, Clock, Lightbulb, PenLine, Trash2, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { AppShell, StickyHeader } from "@/components/app-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -14,7 +14,7 @@ import {
   staggerItem,
 } from "@/components/motion";
 import { Button } from "@/components/ui/button";
-import { getDilemmaLogs, type DilemmaLog, type Category } from "@/lib/dilemma-store";
+import { getDilemmaLogs, deleteDilemmaLog, type DilemmaLog, type Category } from "@/lib/dilemma-store";
 
 const ANALYSIS_THRESHOLD = 5;
 
@@ -212,18 +212,125 @@ function EmptyState() {
   );
 }
 
-function DilemmaCard({ log }: { log: DilemmaLog }) {
+function DetailModal({
+  log,
+  onClose,
+  onDelete,
+}: {
+  log: DilemmaLog;
+  onClose: () => void;
+  onDelete: (id: string) => void;
+}) {
   return (
     <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+        transition={{ duration: 0.2 }}
+        className="relative z-10 w-full max-w-md rounded-2xl border border-border/50 bg-card p-6 shadow-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between">
+          <h2 className="text-lg font-semibold">迷いの詳細</h2>
+          <button
+            onClick={onClose}
+            className="flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <div className="mt-5 space-y-4">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">迷いの内容</p>
+            <p className="mt-1 text-base font-medium">「{log.content}」</p>
+          </div>
+
+          {log.category && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">カテゴリ</p>
+              <div className="mt-1">
+                <CategoryTag category={log.category} />
+              </div>
+            </div>
+          )}
+
+          {log.answer && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">判断軸</p>
+              <p className="mt-1 text-sm text-foreground">{log.answer}</p>
+            </div>
+          )}
+
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">日時</p>
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-foreground">
+              <Clock className="size-3" />
+              {formatDate(log.createdAt)}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => onDelete(log.id)}
+            className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/50"
+          >
+            <Trash2 className="size-3.5" />
+            削除する
+          </motion.button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function DilemmaCard({
+  log,
+  onDelete,
+  onSelect,
+}: {
+  log: DilemmaLog;
+  onDelete: (id: string) => void;
+  onSelect: (log: DilemmaLog) => void;
+}) {
+  return (
+    <motion.div
+      layout
+      exit={{ opacity: 0, height: 0, marginTop: 0, padding: 0, overflow: "hidden" }}
+      transition={{ duration: 0.3 }}
       {...staggerItem}
-      className="rounded-2xl border border-border/50 bg-card p-5 shadow-sm"
+      className="cursor-pointer rounded-2xl border border-border/50 bg-card p-5 shadow-sm transition-colors hover:bg-accent/50"
+      onClick={() => onSelect(log)}
     >
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock className="size-3" />
           {formatDate(log.createdAt)}
         </p>
-        {log.category && <CategoryTag category={log.category} />}
+        <div className="flex items-center gap-2">
+          {log.category && <CategoryTag category={log.category} />}
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(log.id);
+            }}
+            className="flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50 dark:hover:text-red-400"
+          >
+            <Trash2 className="size-3.5" />
+          </motion.button>
+        </div>
       </div>
       <p className="mt-3 text-base font-medium">
         「{log.content}」
@@ -241,6 +348,7 @@ export default function HistoryPage() {
   const [logs, setLogs] = useState<DilemmaLog[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedLog, setSelectedLog] = useState<DilemmaLog | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -248,6 +356,12 @@ export default function HistoryPage() {
       setLoaded(true);
     }, 0);
     return () => clearTimeout(timer);
+  }, []);
+
+  const handleDelete = useCallback((id: string) => {
+    deleteDilemmaLog(id);
+    setLogs((prev) => prev.filter((log) => log.id !== id));
+    setSelectedLog(null);
   }, []);
 
   const categoryCounts = useMemo(() => {
@@ -317,9 +431,16 @@ export default function HistoryPage() {
                 <PatternInsight logs={logs} />
                 <ProgressSection count={logs.length} />
                 <MotionSection {...staggerContainer} className="space-y-3">
-                  {filteredLogs.map((log) => (
-                    <DilemmaCard key={log.id} log={log} />
-                  ))}
+                  <AnimatePresence mode="popLayout">
+                    {filteredLogs.map((log) => (
+                      <DilemmaCard
+                        key={log.id}
+                        log={log}
+                        onDelete={handleDelete}
+                        onSelect={setSelectedLog}
+                      />
+                    ))}
+                  </AnimatePresence>
                 </MotionSection>
                 {filteredLogs.length === 0 && selectedCategory && (
                   <FadeInUp {...fadeInUp}>
@@ -333,6 +454,16 @@ export default function HistoryPage() {
           </div>
         </AppShell>
       </main>
+
+      <AnimatePresence>
+        {selectedLog && (
+          <DetailModal
+            log={selectedLog}
+            onClose={() => setSelectedLog(null)}
+            onDelete={handleDelete}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
