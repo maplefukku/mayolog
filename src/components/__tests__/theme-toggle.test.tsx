@@ -15,7 +15,7 @@ vi.mock('react', async () => {
   const actual = await vi.importActual('react')
   return {
     ...actual,
-    useSyncExternalStore: vi.fn(actual.useSyncExternalStore),
+    useSyncExternalStore: vi.fn(actual.useSyncExternalStore as (...args: unknown[]) => unknown),
   }
 })
 
@@ -26,7 +26,8 @@ describe('ThemeToggle', () => {
   beforeEach(() => {
     mockTheme = 'light'
     mockSetTheme.mockClear()
-    vi.mocked(useSyncExternalStore).mockImplementation((_sub, getSnapshot) => getSnapshot())
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useSyncExternalStore as any).mockImplementation((_sub: unknown, getSnapshot: () => unknown) => getSnapshot())
   })
 
   it('レンダリングされる', () => {
