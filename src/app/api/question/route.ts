@@ -8,9 +8,22 @@ export interface QuestionResponse {
   }[]
 }
 
-const SYSTEM_PROMPT = `あなたは意思決定をサポートするカウンセラーです。
-ユーザーが迷っていることに対して、「なぜ迷っているか」ではなく「何を失いたくないか」「何を得たいか」を引き出す質問を1〜2問だけ作成してください。
+const CATEGORY_HINTS: Record<string, string> = {
+  career: '仕事・キャリアの迷いです。長期的なキャリアパス、スキル成長、安定性vs挑戦などの観点から質問してください。',
+  relationship: '人間関係の迷いです。相手との関係性、自分の気持ちと相手への配慮のバランスなどの観点から質問してください。',
+  time: '時間管理の迷いです。優先順位、後悔の可能性、休息と成長のバランスなどの観点から質問してください。',
+  self: '自己実現の迷いです。挑戦したい気持ちの強さ、リスクとリターン、成長への意欲などの観点から質問してください。',
+  daily: '日常的な迷いです。直感、今の自分に必要なもの、満足感などの観点から質問してください。',
+}
 
+function buildSystemPrompt(category?: string): string {
+  const categoryHint = category && CATEGORY_HINTS[category]
+    ? `\nカテゴリ情報: ${CATEGORY_HINTS[category]}`
+    : ''
+
+  return `あなたは意思決定をサポートするカウンセラーです。
+ユーザーが迷っていることに対して、「なぜ迷っているか」ではなく「何を失いたくないか」「何を得たいか」を引き出す質問を1〜2問だけ作成してください。
+${categoryHint}
 ルール:
 - 質問は1〜2問のみ
 - 各質問に2〜3個の選択肢をつける
@@ -19,10 +32,16 @@ const SYSTEM_PROMPT = `あなたは意思決定をサポートするカウンセ
 
 出力フォーマット:
 {"questions":[{"text":"質問文","options":["選択肢1","選択肢2"]}]}`
+}
 
-const DEEPDIVE_SYSTEM_PROMPT = `あなたは意思決定をサポートするカウンセラーです。
+function buildDeepDiveSystemPrompt(category?: string): string {
+  const categoryHint = category && CATEGORY_HINTS[category]
+    ? `\nカテゴリ情報: ${CATEGORY_HINTS[category]}`
+    : ''
+
+  return `あなたは意思決定をサポートするカウンセラーです。
 ユーザーの迷いと、これまでの質問・回答の履歴をもとに、さらに深い本音を引き出す追加質問を1問だけ作成してください。
-
+${categoryHint}
 ルール:
 - 質問は1問のみ
 - 2〜3個の選択肢をつける
@@ -32,13 +51,15 @@ const DEEPDIVE_SYSTEM_PROMPT = `あなたは意思決定をサポートするカ
 
 出力フォーマット:
 {"questions":[{"text":"質問文","options":["選択肢1","選択肢2"]}]}`
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { dilemma, history } = body as {
+    const { dilemma, history, category } = body as {
       dilemma: string
       history?: { question: string; answer: string }[]
+      category?: string
     }
 
     if (!dilemma || typeof dilemma !== 'string' || dilemma.trim().length === 0) {
@@ -56,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     const isDeepDive = Array.isArray(history) && history.length > 0
-    const systemPrompt = isDeepDive ? DEEPDIVE_SYSTEM_PROMPT : SYSTEM_PROMPT
+    const systemPrompt = isDeepDive ? buildDeepDiveSystemPrompt(category) : buildSystemPrompt(category)
     const userContent = isDeepDive
       ? `迷い: ${dilemma}\n\nこれまでの質問と回答:\n${history.map((h, i) => `Q${i + 1}: ${h.question}\nA${i + 1}: ${h.answer}`).join('\n')}`
       : dilemma

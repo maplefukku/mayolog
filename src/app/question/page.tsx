@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { AppShell, StickyHeader } from "@/components/app-shell";
 import { FadeInUp, fadeInUp } from "@/components/motion";
 import { Button } from "@/components/ui/button";
+import { getCategoryByKey } from "@/lib/templates";
 
 interface Question {
   text: string;
@@ -41,6 +42,8 @@ function QuestionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const input = searchParams.get("q") || "迷っていること";
+  const categoryKey = searchParams.get("cat") || "";
+  const categoryData = getCategoryByKey(categoryKey);
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +63,7 @@ function QuestionContent() {
         const res = await fetch("/api/question", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ dilemma: input }),
+          body: JSON.stringify({ dilemma: input, category: categoryKey || undefined }),
         });
 
         if (!cancelled) {
@@ -85,7 +88,7 @@ function QuestionContent() {
 
     fetchQuestions();
     return () => { cancelled = true; };
-  }, [input]);
+  }, [input, categoryKey]);
 
   if (loading) {
     return (
@@ -125,8 +128,9 @@ function QuestionContent() {
         answer: q.options[finalAnswers[i]] || "",
       })))
     );
+    const catParam = categoryKey ? `&cat=${categoryKey}` : "";
     router.push(
-      `/result?q=${encodeURIComponent(input)}&a=${questionsParam}`
+      `/result?q=${encodeURIComponent(input)}&a=${questionsParam}${catParam}`
     );
   }
 
@@ -136,11 +140,9 @@ function QuestionContent() {
 
     if (isLast) {
       if (canDeepDive) {
-        // Show deep dive choice instead of navigating
         setAnswers(newAnswers);
         setShowDeepDiveChoice(true);
       } else {
-        // Max questions reached, go to result
         goToResult(newAnswers);
       }
     } else {
@@ -161,6 +163,7 @@ function QuestionContent() {
         body: JSON.stringify({
           dilemma: input,
           history: buildHistory(answers),
+          category: categoryKey || undefined,
         }),
       });
 
@@ -172,7 +175,6 @@ function QuestionContent() {
           setCurrentQ(questions.length);
         }
       } else {
-        // Fallback: go to result if deep dive fails
         goToResult(answers);
       }
     } catch {
@@ -187,7 +189,6 @@ function QuestionContent() {
     goToResult(answers);
   }
 
-  // Deep dive loading state
   if (deepDiveLoading) {
     return (
       <div className="flex min-h-full flex-col items-center justify-center gap-3">
@@ -197,7 +198,6 @@ function QuestionContent() {
     );
   }
 
-  // Deep dive choice screen
   if (showDeepDiveChoice) {
     return (
       <div className="flex min-h-full flex-col">
@@ -232,6 +232,26 @@ function QuestionContent() {
                   ここまでの回答で分析できますが、もう少し深掘りすると、より正確な結果が出せます。
                 </p>
               </div>
+
+              {/* Category-specific deep dive hints */}
+              {categoryData && (
+                <div className="w-full rounded-2xl border border-border/30 bg-muted/30 p-4">
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">
+                    {categoryData.icon} {categoryData.label}の迷いでは、こんな視点も大事
+                  </p>
+                  <ul className="space-y-1">
+                    {categoryData.deepDiveQuestions.map((q) => (
+                      <li
+                        key={q}
+                        className="flex items-center gap-2 text-sm text-muted-foreground"
+                      >
+                        <span className="size-1 shrink-0 rounded-full bg-muted-foreground/40" />
+                        {q}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <div className="flex w-full flex-col gap-3">
                 <motion.button
@@ -278,7 +298,12 @@ function QuestionContent() {
             戻る
           </Button>
         </Link>
-        <span />
+        {categoryData && (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
+            {categoryData.icon} {categoryData.label}
+          </span>
+        )}
+        {!categoryData && <span />}
       </StickyHeader>
 
       <main className="flex flex-1 flex-col py-8">
