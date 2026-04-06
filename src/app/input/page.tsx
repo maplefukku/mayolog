@@ -83,10 +83,10 @@ export default function InputPage() {
         </Link>
         <Link
           href="/history"
-          aria-label="迷い履歴"
-          className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
           <Clock className="size-4" />
+          <span className="hidden sm:inline">履歴</span>
         </Link>
       </StickyHeader>
 
@@ -195,7 +195,7 @@ export default function InputPage() {
                 maxLength={maxLength}
                 placeholder={placeholders[placeholderIndex]}
                 aria-label="迷っていることを入力"
-                className="min-h-[120px] rounded-2xl border-border/50 bg-muted/50 text-base transition-colors focus-visible:bg-background"
+                className="min-h-[120px] rounded-2xl border-border/50 bg-muted/50 text-base transition-colors focus-visible:bg-background focus-visible:ring-0"
               />
               {text.length > 0 && (
                 <p className={`mt-1.5 text-right text-xs ${text.trim().length > maxLength ? "text-destructive" : "text-muted-foreground"}`}>

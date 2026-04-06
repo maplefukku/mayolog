@@ -42,24 +42,24 @@ export default function Home() {
         <div className="flex items-center gap-2">
           <Link
             href="/growth"
-            aria-label="成長グラフ"
-            className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <TrendingUp className="size-4" />
+            <span className="hidden sm:inline">成長</span>
           </Link>
           <Link
             href="/es"
-            aria-label="ES生成"
-            className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <FileText className="size-4" />
+            <span className="hidden sm:inline">ES</span>
           </Link>
           <Link
             href="/history"
-            aria-label="迷い履歴"
-            className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <Clock className="size-4" />
+            <span className="hidden sm:inline">履歴</span>
           </Link>
           <ThemeToggle />
         </div>
@@ -122,7 +122,7 @@ export default function Home() {
                   <motion.div
                     key={feature.title}
                     {...staggerItem}
-                    className="rounded-2xl border border-border/50 bg-card p-6 shadow-sm"
+                    className="rounded-2xl border border-border/50 bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
                   >
                     <div className="mb-3 inline-flex size-10 items-center justify-center rounded-2xl bg-secondary">
                       <feature.icon className="size-5 text-foreground" />
