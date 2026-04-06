@@ -16,6 +16,7 @@ const notoSansJP = Noto_Sans_JP({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://mayolog.vercel.app"),
   title: "MayoLog - 迷ったら5秒で記録",
   description:
     "迷った瞬間を5秒で記録。AIが判断パターンを分析し、自分の軸が見える。",
