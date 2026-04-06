@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { glmClient, GLM_MODEL } from '@/lib/ai/glm'
+import { badRequest, serverError, gatewayError, gatewayTimeout } from '@/lib/api/errors'
 
 export interface QuestionResponse {
   questions: {
@@ -63,17 +64,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (!dilemma || typeof dilemma !== 'string' || dilemma.trim().length === 0) {
-      return NextResponse.json(
-        { error: '迷いの内容を入力してください' },
-        { status: 400 },
-      )
+      return badRequest('迷いの内容を入力してください')
     }
 
     if (dilemma.length > 200) {
-      return NextResponse.json(
-        { error: '200文字以内で入力してください' },
-        { status: 400 },
-      )
+      return badRequest('200文字以内で入力してください')
     }
 
     const isDeepDive = Array.isArray(history) && history.length > 0
@@ -95,19 +90,13 @@ export async function POST(request: NextRequest) {
     const raw = completion.choices[0]?.message?.content ?? ''
     const jsonMatch = raw.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
-      return NextResponse.json(
-        { error: 'AIからの応答を解析できませんでした' },
-        { status: 502 },
-      )
+      return gatewayError('AIからの応答を解析できませんでした')
     }
 
     const parsed: QuestionResponse = JSON.parse(jsonMatch[0])
 
     if (!Array.isArray(parsed.questions) || parsed.questions.length === 0) {
-      return NextResponse.json(
-        { error: 'AIからの応答を解析できませんでした' },
-        { status: 502 },
-      )
+      return gatewayError('AIからの応答を解析できませんでした')
     }
 
     return NextResponse.json(parsed)
@@ -115,23 +104,14 @@ export async function POST(request: NextRequest) {
     console.error('Question generation failed:', error)
 
     if (error instanceof SyntaxError) {
-      return NextResponse.json(
-        { error: 'AIからの応答を解析できませんでした' },
-        { status: 502 },
-      )
+      return gatewayError('AIからの応答を解析できませんでした')
     }
 
     const isTimeout = error instanceof Error && error.message.includes('timed out')
     if (isTimeout) {
-      return NextResponse.json(
-        { error: 'AIの応答がタイムアウトしました。しばらく待ってから再度お試しください。' },
-        { status: 504 },
-      )
+      return gatewayTimeout('AIの応答がタイムアウトしました。しばらく待ってから再度お試しください。')
     }
 
-    return NextResponse.json(
-      { error: 'AI質問生成に失敗しました。質問なしで記録を続けてください。' },
-      { status: 500 },
-    )
+    return serverError('AI質問生成に失敗しました。質問なしで記録を続けてください。')
   }
 }

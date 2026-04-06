@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { glmClient, GLM_MODEL } from '@/lib/ai/glm'
+import { badRequest, serverError, gatewayError, gatewayTimeout } from '@/lib/api/errors'
 
 export interface DilemmaLog {
   content: string
@@ -31,17 +32,11 @@ export async function POST(request: NextRequest) {
     const { logs } = body as { logs: DilemmaLog[] }
 
     if (!Array.isArray(logs)) {
-      return NextResponse.json(
-        { error: 'ログデータが不正です' },
-        { status: 400 },
-      )
+      return badRequest('ログデータが不正です')
     }
 
     if (logs.length < 5) {
-      return NextResponse.json(
-        { error: '分析には5件以上のログが必要です' },
-        { status: 400 },
-      )
+      return badRequest('分析には5件以上のログが必要です')
     }
 
     const logsText = logs.map((log, i) => {
@@ -64,19 +59,13 @@ export async function POST(request: NextRequest) {
     const raw = completion.choices[0]?.message?.content ?? ''
     const jsonMatch = raw.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
-      return NextResponse.json(
-        { error: 'AIからの応答を解析できませんでした' },
-        { status: 502 },
-      )
+      return gatewayError('AIからの応答を解析できませんでした')
     }
 
     const parsed: AnalyzeResponse = JSON.parse(jsonMatch[0])
 
     if (!Array.isArray(parsed.axes) || parsed.axes.length === 0) {
-      return NextResponse.json(
-        { error: 'AIからの応答を解析できませんでした' },
-        { status: 502 },
-      )
+      return gatewayError('AIからの応答を解析できませんでした')
     }
 
     return NextResponse.json(parsed)
@@ -84,23 +73,14 @@ export async function POST(request: NextRequest) {
     console.error('Analysis failed:', error)
 
     if (error instanceof SyntaxError) {
-      return NextResponse.json(
-        { error: 'AIからの応答を解析できませんでした' },
-        { status: 502 },
-      )
+      return gatewayError('AIからの応答を解析できませんでした')
     }
 
     const isTimeout = error instanceof Error && error.message.includes('timed out')
     if (isTimeout) {
-      return NextResponse.json(
-        { error: 'AIの応答がタイムアウトしました。しばらく待ってから再度お試しください。' },
-        { status: 504 },
-      )
+      return gatewayTimeout('AIの応答がタイムアウトしました。しばらく待ってから再度お試しください。')
     }
 
-    return NextResponse.json(
-      { error: '分析に失敗しました' },
-      { status: 500 },
-    )
+    return serverError('分析に失敗しました')
   }
 }

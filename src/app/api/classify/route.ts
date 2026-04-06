@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { glmClient, GLM_MODEL } from '@/lib/ai/glm'
+import { badRequest } from '@/lib/api/errors'
 
 export const categories = ['career', 'relationship', 'time', 'self', 'daily'] as const
 export type Category = (typeof categories)[number]
@@ -24,10 +25,7 @@ export async function POST(request: NextRequest) {
     const { dilemma } = body as { dilemma: string }
 
     if (!dilemma || typeof dilemma !== 'string' || dilemma.trim().length === 0) {
-      return NextResponse.json(
-        { error: '迷いの内容を入力してください' },
-        { status: 400 },
-      )
+      return badRequest('迷いの内容を入力してください')
     }
 
     const completion = await glmClient.chat.completions.create({

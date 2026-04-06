@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { glmClient, GLM_MODEL } from '@/lib/ai/glm'
+import { badRequest, serverError, gatewayError, gatewayTimeout } from '@/lib/api/errors'
 
 type Format = 'es' | 'interview' | 'intro'
 
@@ -48,10 +49,7 @@ export async function POST(request: NextRequest) {
     const { axes, format } = body as { axes: Axis[]; format: string }
 
     if (!Array.isArray(axes) || axes.length === 0) {
-      return NextResponse.json(
-        { error: '判断軸データが不正です' },
-        { status: 400 },
-      )
+      return badRequest('判断軸データが不正です')
     }
 
     const validFormat: Format = (format === 'interview' || format === 'intro') ? format : 'es'
@@ -74,10 +72,7 @@ export async function POST(request: NextRequest) {
     const text = completion.choices[0]?.message?.content ?? ''
 
     if (!text.trim()) {
-      return NextResponse.json(
-        { error: 'AIからの応答が空でした' },
-        { status: 502 },
-      )
+      return gatewayError('AIからの応答が空でした')
     }
 
     return NextResponse.json({ text: text.trim() })
@@ -86,15 +81,9 @@ export async function POST(request: NextRequest) {
 
     const isTimeout = error instanceof Error && error.message.includes('timed out')
     if (isTimeout) {
-      return NextResponse.json(
-        { error: 'AIの応答がタイムアウトしました。しばらく待ってから再度お試しください。' },
-        { status: 504 },
-      )
+      return gatewayTimeout('AIの応答がタイムアウトしました。しばらく待ってから再度お試しください。')
     }
 
-    return NextResponse.json(
-      { error: '生成に失敗しました' },
-      { status: 500 },
-    )
+    return serverError('生成に失敗しました')
   }
 }
