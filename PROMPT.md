@@ -1,20 +1,46 @@
-# テスト修正タスク
+# Middleware to Proxy Migration - mayolog
 
-## 問題
-テスト `src/app/__tests__/input-extra.test.tsx` の1件が失敗:
+## 目的
+Next.js 16の公式移行ガイドに従って、deprecatedなmiddleware.tsをproxy.tsに移行する。
 
+## 背景
+Next.js 16からmiddlewareファイルがdeprecatedになり、proxyファイルに置き換える必要がある。
+ビルド時に以下の警告が出ている:
 ```
-expect(screen.getByLabelText('迷い履歴')).toBeInTheDocument()
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead.
 ```
 
-「迷い履歴」というaria-labelを持つ要素が見つからないエラー。
+## 移行手順
 
-## 修正手順
-1. `src/app/__tests__/input-extra.test.tsx` の失敗テストを確認
-2. `src/app/input/page.tsx` (または該当コンポーネント) で「迷い履歴」リンクの実装を確認
-3. テストが実際のUIと一致するように修正（テスト側を修正するか、aria-labelを追加）
-4. `npx vitest run src/app/__tests__/input-extra.test.tsx` でテストが通ることを確認
+### 公式ドキュメント
+https://nextjs.org/docs/messages/middleware-to-proxy
 
-## 注意
-- 最小限の修正で対応
-- コミットは不要（結果を報告するだけでOK）
+### 手順
+1. 公式codemodを実行:
+```bash
+npx @next/codemod@canary middleware-to-proxy .
+```
+
+2. 変更内容を確認:
+- middleware.ts → proxy.ts にリネーム
+- export function middleware() → export function proxy() に変更
+
+3. ビルドが通ることを確認:
+```bash
+npm run build
+```
+
+4. 既存テストが通ることを確認:
+```bash
+npx vitest run
+```
+
+## 注意事項
+- SupabaseのupdateSession関数を使っているので、importパスは変更しない
+- matcher configもそのまま維持
+- テストカバレッジを維持（現在96.87%）
+
+## 完了条件
+- npm run build が警告なしで成功
+- npx vitest run が全て成功
+- TypeScriptエラーなし

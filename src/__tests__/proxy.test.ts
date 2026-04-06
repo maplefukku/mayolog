@@ -5,13 +5,13 @@ vi.mock('@/lib/supabase/middleware', () => ({
   updateSession: vi.fn().mockResolvedValue(NextResponse.next()),
 }))
 
-import { middleware, config } from '../middleware'
+import { proxy, config } from '../proxy'
 import { updateSession } from '@/lib/supabase/middleware'
 
-describe('ルートミドルウェア', () => {
+describe('ルートプロキシ', () => {
   it('updateSession を呼び出す', async () => {
     const request = new NextRequest('http://localhost:3000/')
-    await middleware(request)
+    await proxy(request)
     expect(updateSession).toHaveBeenCalledWith(request)
   })
 
@@ -20,7 +20,7 @@ describe('ルートミドルウェア', () => {
     vi.mocked(updateSession).mockResolvedValue(expectedResponse)
 
     const request = new NextRequest('http://localhost:3000/test')
-    const response = await middleware(request)
+    const response = await proxy(request)
     expect(response).toBe(expectedResponse)
   })
 
