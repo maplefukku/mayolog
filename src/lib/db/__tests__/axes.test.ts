@@ -103,6 +103,19 @@ describe('axes', () => {
       const result = await getLatestAxisAnalysis(client, 'user-1')
       expect(result).toBeNull()
     })
+
+    it('PGRST116以外のエラーで例外を投げる', async () => {
+      const dbError = { code: '42P01', message: 'relation does not exist' }
+      const mockSingle = vi.fn().mockResolvedValue({ data: null, error: dbError })
+      const mockLimit = vi.fn().mockReturnValue({ single: mockSingle })
+      const mockOrder = vi.fn().mockReturnValue({ limit: mockLimit })
+      const mockEq = vi.fn().mockReturnValue({ order: mockOrder })
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq })
+      const mockFrom = vi.fn().mockReturnValue({ select: mockSelect })
+      const client = { from: mockFrom } as any
+
+      await expect(getLatestAxisAnalysis(client, 'user-1')).rejects.toEqual(dbError)
+    })
   })
 
   describe('getAxisAnalysisHistory', () => {
@@ -115,6 +128,88 @@ describe('axes', () => {
 
       const result = await getAxisAnalysisHistory(client, 'user-1')
       expect(result).toEqual([mockAxisAnalysis])
+    })
+
+    it('エラー時に例外を投げる', async () => {
+      const dbError = { code: '42P01', message: 'relation does not exist' }
+      const mockOrder = vi.fn().mockResolvedValue({ data: null, error: dbError })
+      const mockEq = vi.fn().mockReturnValue({ order: mockOrder })
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq })
+      const mockFrom = vi.fn().mockReturnValue({ select: mockSelect })
+      const client = { from: mockFrom } as any
+
+      await expect(getAxisAnalysisHistory(client, 'user-1')).rejects.toEqual(dbError)
+    })
+  })
+
+  describe('upsertAxisAnalysis エラーケース', () => {
+    it('既存チェックでPGRST116以外のエラーが出たら例外を投げる', async () => {
+      const dbError = { code: '42P01', message: 'relation does not exist' }
+      const mockExistingSingle = vi.fn().mockResolvedValue({ data: null, error: dbError })
+      const mockExistingLimit = vi.fn().mockReturnValue({ single: mockExistingSingle })
+      const mockExistingOrder = vi.fn().mockReturnValue({ limit: mockExistingLimit })
+      const mockExistingEq = vi.fn().mockReturnValue({ order: mockExistingOrder })
+      const mockExistingSelect = vi.fn().mockReturnValue({ eq: mockExistingEq })
+      const mockFrom = vi.fn().mockReturnValue({ select: mockExistingSelect })
+      const client = { from: mockFrom } as any
+
+      await expect(
+        upsertAxisAnalysis(client, { userId: 'user-1', axes: [{ label: 'test', evidence: [] }] }),
+      ).rejects.toEqual(dbError)
+    })
+
+    it('更新時にエラーが出たら例外を投げる', async () => {
+      const dbError = { code: '42501', message: 'permission denied' }
+      const mockUpdateSingle = vi.fn().mockResolvedValue({ data: null, error: dbError })
+      const mockUpdateSelect = vi.fn().mockReturnValue({ single: mockUpdateSingle })
+      const mockUpdateEq = vi.fn().mockReturnValue({ select: mockUpdateSelect })
+      const mockUpdate = vi.fn().mockReturnValue({ eq: mockUpdateEq })
+
+      const mockExistingSingle = vi.fn().mockResolvedValue({ data: { id: 'axis-1' }, error: null })
+      const mockExistingLimit = vi.fn().mockReturnValue({ single: mockExistingSingle })
+      const mockExistingOrder = vi.fn().mockReturnValue({ limit: mockExistingLimit })
+      const mockExistingEq = vi.fn().mockReturnValue({ order: mockExistingOrder })
+      const mockExistingSelect = vi.fn().mockReturnValue({ eq: mockExistingEq })
+
+      let callCount = 0
+      const mockFrom = vi.fn().mockImplementation(() => {
+        callCount++
+        if (callCount === 1) return { select: mockExistingSelect }
+        return { update: mockUpdate }
+      })
+      const client = { from: mockFrom } as any
+
+      await expect(
+        upsertAxisAnalysis(client, { userId: 'user-1', axes: [{ label: 'test', evidence: [] }] }),
+      ).rejects.toEqual(dbError)
+    })
+
+    it('新規作成時にエラーが出たら例外を投げる', async () => {
+      const dbError = { code: '42501', message: 'permission denied' }
+      const mockInsertSingle = vi.fn().mockResolvedValue({ data: null, error: dbError })
+      const mockInsertSelect = vi.fn().mockReturnValue({ single: mockInsertSingle })
+      const mockInsert = vi.fn().mockReturnValue({ select: mockInsertSelect })
+
+      const mockExistingSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: 'PGRST116' },
+      })
+      const mockExistingLimit = vi.fn().mockReturnValue({ single: mockExistingSingle })
+      const mockExistingOrder = vi.fn().mockReturnValue({ limit: mockExistingLimit })
+      const mockExistingEq = vi.fn().mockReturnValue({ order: mockExistingOrder })
+      const mockExistingSelect = vi.fn().mockReturnValue({ eq: mockExistingEq })
+
+      let callCount = 0
+      const mockFrom = vi.fn().mockImplementation(() => {
+        callCount++
+        if (callCount === 1) return { select: mockExistingSelect }
+        return { insert: mockInsert }
+      })
+      const client = { from: mockFrom } as any
+
+      await expect(
+        upsertAxisAnalysis(client, { userId: 'user-1', axes: [{ label: 'test', evidence: [] }] }),
+      ).rejects.toEqual(dbError)
     })
   })
 })

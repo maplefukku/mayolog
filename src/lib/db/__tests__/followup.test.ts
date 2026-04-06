@@ -35,5 +35,35 @@ describe('followup', () => {
       expect(result).toEqual(followups)
       expect(mockEq).toHaveBeenCalledWith('dilemma_id', 'dilemma-1')
     })
+
+    it('エラー時に例外を投げる', async () => {
+      const dbError = { code: '42P01', message: 'relation does not exist' }
+      const mockOrder = vi.fn().mockResolvedValue({ data: null, error: dbError })
+      const mockEq = vi.fn().mockReturnValue({ order: mockOrder })
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq })
+      const mockFrom = vi.fn().mockReturnValue({ select: mockSelect })
+      const client = { from: mockFrom } as any
+
+      await expect(getFollowupsByDilemma(client, 'dilemma-1')).rejects.toEqual(dbError)
+    })
+  })
+
+  describe('createFollowup エラーケース', () => {
+    it('エラー時に例外を投げる', async () => {
+      const dbError = { code: '42501', message: 'permission denied' }
+      const client = createMockClient({
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: null, error: dbError }),
+        }),
+      })
+
+      await expect(
+        createFollowup(client, {
+          dilemmaId: 'dilemma-1',
+          question: 'test',
+          answer: 'test',
+        }),
+      ).rejects.toEqual(dbError)
+    })
   })
 })

@@ -91,6 +91,17 @@ describe('dilemmas', () => {
       const result = await getDilemmaById(client, 'nonexistent')
       expect(result).toBeNull()
     })
+
+    it('PGRST116以外のエラーで例外を投げる', async () => {
+      const dbError = { code: '42P01', message: 'relation does not exist' }
+      const mockSingle = vi.fn().mockResolvedValue({ data: null, error: dbError })
+      const mockEq = vi.fn().mockReturnValue({ single: mockSingle })
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq })
+      const mockFrom = vi.fn().mockReturnValue({ select: mockSelect })
+      const client = { from: mockFrom } as any
+
+      await expect(getDilemmaById(client, 'dilemma-1')).rejects.toEqual(dbError)
+    })
   })
 
   describe('deleteDilemma', () => {
@@ -101,6 +112,42 @@ describe('dilemmas', () => {
       const client = { from: mockFrom } as any
 
       await expect(deleteDilemma(client, 'dilemma-1')).resolves.toBeUndefined()
+    })
+
+    it('エラー時に例外を投げる', async () => {
+      const dbError = { code: '42501', message: 'permission denied' }
+      const mockEq = vi.fn().mockResolvedValue({ error: dbError })
+      const mockDelete = vi.fn().mockReturnValue({ eq: mockEq })
+      const mockFrom = vi.fn().mockReturnValue({ delete: mockDelete })
+      const client = { from: mockFrom } as any
+
+      await expect(deleteDilemma(client, 'dilemma-1')).rejects.toEqual(dbError)
+    })
+  })
+
+  describe('getDilemmasByUser エラーケース', () => {
+    it('エラー時に例外を投げる', async () => {
+      const dbError = { code: '42P01', message: 'relation does not exist' }
+      const mockOrder = vi.fn().mockResolvedValue({ data: null, error: dbError })
+      const mockEq = vi.fn().mockReturnValue({ order: mockOrder })
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq })
+      const mockFrom = vi.fn().mockReturnValue({ select: mockSelect })
+      const client = { from: mockFrom } as any
+
+      await expect(getDilemmasByUser(client, 'user-1')).rejects.toEqual(dbError)
+    })
+
+    it('offsetのみ指定時にデフォルトlimit(20)を使用する', async () => {
+      const mockRange = vi.fn().mockResolvedValue({ data: [], error: null })
+      const mockOrder = vi.fn().mockReturnValue({ range: mockRange })
+      const mockEq = vi.fn().mockReturnValue({ order: mockOrder })
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq })
+      const mockFrom = vi.fn().mockReturnValue({ select: mockSelect })
+      const client = { from: mockFrom } as any
+
+      await getDilemmasByUser(client, 'user-1', { offset: 10 })
+
+      expect(mockRange).toHaveBeenCalledWith(10, 29)
     })
   })
 })
