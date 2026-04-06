@@ -83,4 +83,32 @@ describe('POST /api/analyze', () => {
     const res = await POST(makeRequest({ logs: makeLogs(5) }))
     expect(res.status).toBe(500)
   })
+
+  it('AIの応答JSONが不正な場合502を返す (SyntaxError)', async () => {
+    mockCreate.mockResolvedValue({
+      choices: [{ message: { content: '{"axes": invalid json' } }],
+    })
+
+    const { POST } = await import('@/app/api/analyze/route')
+    const res = await POST(makeRequest({ logs: makeLogs(5) }))
+    expect(res.status).toBe(502)
+  })
+
+  it('AIの応答がタイムアウトした場合504を返す', async () => {
+    mockCreate.mockRejectedValue(new Error('Request timed out'))
+
+    const { POST } = await import('@/app/api/analyze/route')
+    const res = await POST(makeRequest({ logs: makeLogs(5) }))
+    expect(res.status).toBe(504)
+  })
+
+  it('AIの応答が空配列の場合502を返す', async () => {
+    mockCreate.mockResolvedValue({
+      choices: [{ message: { content: '{"axes": []}' } }],
+    })
+
+    const { POST } = await import('@/app/api/analyze/route')
+    const res = await POST(makeRequest({ logs: makeLogs(5) }))
+    expect(res.status).toBe(502)
+  })
 })
